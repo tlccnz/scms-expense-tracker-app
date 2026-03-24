@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="ExpenseLog" />
-  <title>ExpenseLog</title>
+  <title>Time &amp; Expense Log</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -312,7 +312,7 @@
   <!-- HEADER -->
   <div class="header">
     <div>
-      <div class="header-title">💼 ExpenseLog</div>
+      <div class="header-title">🕐 Time &amp; Expense Log</div>
       <div class="header-subtitle" id="header-date"></div>
     </div>
     <div class="header-badge" id="header-total">$0.00</div>
@@ -323,6 +323,7 @@
     <div class="tab active" data-tab="add"><span class="tab-icon">➕</span>Add</div>
     <div class="tab" data-tab="history"><span class="tab-icon">📋</span>History</div>
     <div class="tab" data-tab="summary"><span class="tab-icon">📊</span>Summary</div>
+    <div class="tab" data-tab="invoice"><span class="tab-icon">🧾</span>Invoice</div>
     <div class="tab" data-tab="settings"><span class="tab-icon">⚙️</span>Settings</div>
   </div>
 
@@ -347,6 +348,9 @@
         </div>
         <div class="type-btn" id="type-expense" onclick="setType('expense')">
           <span class="type-btn-icon">💳</span>Expense
+        </div>
+        <div class="type-btn" id="type-time" onclick="setType('time')">
+          <span class="type-btn-icon">🕐</span>Time
         </div>
       </div>
 
@@ -450,6 +454,49 @@
         <button class="btn btn-success" onclick="saveExpense()">✓ Save Expense</button>
       </div>
 
+
+      <!-- ── TIME FORM ── -->
+      <div id="time-form" style="display:none">
+
+        <div class="card">
+          <div class="card-title">Billing Period</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Select the start and end dates this timesheet covers. Hours are not tied to specific days.</p>
+          <div class="row">
+            <div class="field">
+              <label>Period Start</label>
+              <input type="date" id="time-period-start" />
+            </div>
+            <div class="field">
+              <label>Period End</label>
+              <input type="date" id="time-period-end" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Log Hours</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Add hours for each type of work in this period.</p>
+          <div id="time-type-rows"><!-- populated by JS --></div>
+          <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:13px;font-weight:700;color:var(--text2)">Total Hours</span>
+              <span style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent2)" id="time-total-hours">0.00 hrs</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+              <span style="font-size:13px;font-weight:700;color:var(--text2)">Total Earnings</span>
+              <span style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)" id="time-total-earnings">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></div>
+          <textarea id="time-notes" placeholder="Any notes for this timesheet period…"></textarea>
+        </div>
+
+        <button class="btn btn-success" onclick="saveTimeEntry()">✓ Save Timesheet</button>
+      </div>
+
     </div><!-- /panel-add -->
 
     <!-- ══════════════════════════════════════
@@ -460,6 +507,7 @@
         <div class="filter-chip active" onclick="setFilter(this,'all')">All</div>
         <div class="filter-chip" onclick="setFilter(this,'mileage')">🚗 Mileage</div>
         <div class="filter-chip" onclick="setFilter(this,'expense')">💳 Expenses</div>
+        <div class="filter-chip" onclick="setFilter(this,'time')">🕐 Time</div>
       </div>
       <div id="history-list"></div>
     </div>
@@ -479,6 +527,8 @@
         <div class="stat-box"><div class="stat-label">Total km</div><div class="stat-value blue" id="sum-miles">0</div></div>
         <div class="stat-box"><div class="stat-label">km Reimb.</div><div class="stat-value green" id="sum-mile-reimb">$0</div></div>
         <div class="stat-box"><div class="stat-label">Expenses</div><div class="stat-value amber" id="sum-expense">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total Hours</div><div class="stat-value blue" id="sum-hours">0</div></div>
+        <div class="stat-box"><div class="stat-label">Time Earnings</div><div class="stat-value green" id="sum-earnings">$0</div></div>
         <div class="stat-box"><div class="stat-label">Total Claim</div><div class="stat-value green" id="sum-total">$0</div></div>
       </div>
 
@@ -501,9 +551,12 @@
           <div class="card-title" style="margin-bottom:8px">Preview</div>
           <div class="export-preview" id="export-preview"></div>
         </div>
-        <div style="display:flex;gap:10px;margin-bottom:10px">
+        <div style="display:flex;gap:10px;margin-bottom:6px">
           <button class="btn btn-ghost" style="flex:1" onclick="copyReport()">📋 Copy</button>
-          <button class="btn btn-primary" style="flex:1" onclick="emailReport()">✉️ Email</button>
+          <button class="btn btn-primary" style="flex:1" onclick="emailReport()">✉️ Send</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">
+          On mobile: opens share sheet. On desktop: copies report to clipboard — then paste into your email app.
         </div>
         <button class="btn btn-ghost" onclick="downloadCSV()">⬇️ Download CSV</button>
       </div>
@@ -513,6 +566,71 @@
         <button class="btn btn-danger" onclick="confirmClear()">🗑️ Clear All Data</button>
       </div>
     </div>
+
+
+    <!-- ══════════════════════════════════════
+         INVOICE PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-invoice">
+
+      <div class="period-row" id="inv-period-row">
+        <div class="period-btn active" onclick="setInvPeriod(this,'month')">Month</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'quarter')">Quarter</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'year')">Year</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'all')">All</div>
+      </div>
+
+      <!-- Invoice totals preview -->
+      <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px">
+        <div class="stat-box"><div class="stat-label">Hours</div><div class="stat-value blue" id="inv-hours">0</div></div>
+        <div class="stat-box"><div class="stat-label">Expenses</div><div class="stat-value amber" id="inv-expenses">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total</div><div class="stat-value green" id="inv-total">$0</div></div>
+      </div>
+
+      <!-- Invoice settings -->
+      <div class="card">
+        <div class="card-title">Invoice Details</div>
+        <div class="row">
+          <div class="field">
+            <label>Invoice Number</label>
+            <input type="text" id="inv-number" placeholder="INV-001" />
+          </div>
+          <div class="field">
+            <label>Invoice Date</label>
+            <input type="date" id="inv-date" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Period Description</label>
+          <input type="text" id="inv-period-label" placeholder="e.g. March 2025" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Include in Invoice</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
+            <input type="checkbox" id="inv-include-time" checked style="width:18px;height:18px;accent-color:var(--accent)" />
+            Time entries &amp; earnings
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
+            <input type="checkbox" id="inv-include-mileage" checked style="width:18px;height:18px;accent-color:var(--accent)" />
+            Mileage reimbursement
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
+            <input type="checkbox" id="inv-include-expenses" checked style="width:18px;height:18px;accent-color:var(--accent)" />
+            Expenses
+          </label>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <button class="btn btn-ghost" onclick="previewInvoice()">👁 Preview</button>
+        <button class="btn btn-primary" onclick="generateInvoice()">📄 Generate PDF</button>
+      </div>
+      <button class="btn btn-ghost" style="margin-bottom:12px" onclick="emailInvoice()">✉️ Send Invoice</button>
+
+    </div><!-- /panel-invoice -->
 
     <!-- ══════════════════════════════════════
          SETTINGS PANEL
@@ -578,6 +696,43 @@
           </div>
           <button class="btn btn-primary" onclick="addDestination()" style="margin-top:4px">Add Destination</button>
         </div>
+
+      <!-- Time types -->
+      <div class="settings-section">
+        <div class="settings-section-title">Time Types &amp; Rates</div>
+        <div class="list-editor" id="time-types-list"></div>
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">Add Time Type</div>
+          <div class="field"><label>Name</label><input type="text" id="new-timetype-name" placeholder="e.g. Senior Tutor" /></div>
+          <div class="field"><label>Hourly Rate ($)</label><input type="number" id="new-timetype-rate" placeholder="0.00" min="0" step="0.01" /></div>
+          <button class="btn btn-primary" onclick="addTimeType()" style="margin-top:4px">Add Time Type</button>
+        </div>
+      </div>
+
+      <!-- Your business details -->
+      <div class="settings-section">
+        <div class="settings-section-title">Your Details (for invoices)</div>
+        <div class="card">
+          <div class="field"><label>Your Name / Business Name</label><input type="text" id="setting-biz-name" placeholder="Jane Smith" /></div>
+          <div class="field"><label>Address</label><textarea id="setting-biz-address" placeholder="123 Main St&#10;Auckland 1010"></textarea></div>
+          <div class="field"><label>Email</label><input type="email" id="setting-biz-email" placeholder="jane@example.com" /></div>
+          <div class="field"><label>Phone</label><input type="text" id="setting-biz-phone" placeholder="+64 21 123 4567" /></div>
+          <div class="field"><label>Bank Account (for payment)</label><input type="text" id="setting-biz-bank" placeholder="12-3456-7890123-00" /></div>
+          <button class="btn btn-ghost" onclick="saveBusinessDetails()" style="margin-top:4px">Save Details</button>
+        </div>
+      </div>
+
+      <!-- Client details -->
+      <div class="settings-section">
+        <div class="settings-section-title">Client Details (for invoices)</div>
+        <div class="card">
+          <div class="field"><label>Client Name / Organisation</label><input type="text" id="setting-client-name" placeholder="ABC Company Ltd" /></div>
+          <div class="field"><label>Client Address</label><textarea id="setting-client-address" placeholder="456 Business Ave&#10;Wellington 6011"></textarea></div>
+          <div class="field"><label>Client Email</label><input type="email" id="setting-client-email" placeholder="accounts@client.com" /></div>
+          <button class="btn btn-ghost" onclick="saveClientDetails()" style="margin-top:4px">Save Details</button>
+        </div>
+      </div>
+
       </div>
 
     </div><!-- /panel-settings -->
@@ -630,21 +785,26 @@
 // ═══════════════════════════════════════════════════════════
 const DEFAULT_CONFIG = {
   apiKey: '',
-  ratePerKm: 1.17,   // NZ IRD published rate (current)
+  ratePerKm: 1.17,
   purposes: [
-    'Client visit',
-    'Office commute',
-    'Airport transfer',
-    'Site inspection',
-    'Training / conference',
-    'Other business'
+    'Client visit','Office commute','Airport transfer',
+    'Site inspection','Training / conference','Other business'
   ],
   destinations: [
     { id: 'd1', name: 'Home',    icon: '🏠', address: '' },
     { id: 'd2', name: 'Office',  icon: '🏢', address: '' },
     { id: 'd3', name: 'Airport', icon: '✈️', address: '' },
     { id: 'd4', name: 'Client',  icon: '🤝', address: '' }
-  ]
+  ],
+  timeTypes: [
+    { id: 't1', name: 'Senior Tutor',      rate: 0 },
+    { id: 't2', name: 'Scholarship Lesson', rate: 0 },
+    { id: 't3', name: 'Admin',              rate: 0 },
+    { id: 't4', name: 'Travel',             rate: 0 }
+  ],
+  bizDetails: { name:'', address:'', email:'', phone:'', bank:'' },
+  clientDetails: { name:'', address:'', email:'' },
+  lastInvoiceNumber: 0
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -656,9 +816,10 @@ let receipts = JSON.parse(localStorage.getItem('et_receipts') || '{}');
 let currentType    = 'mileage';
 let currentFilter  = 'all';
 let currentPeriod  = 'month';
+let currentInvPeriod = 'month';
 let selectedCat    = 'Meals';
 let pendingReceipts = [];
-let tripStops      = [];   // array of destination ids
+let tripStops      = [];
 let currentDistKm  = 0;
 let distanceTimer  = null;
 let deferredPrompt = null;
@@ -708,6 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (t.dataset.tab === 'summary')  { updateSummary(); setExportPreview(); }
       if (t.dataset.tab === 'history')  { renderHistory(); }
       if (t.dataset.tab === 'settings') { renderSettingsPage(); }
+      if (t.dataset.tab === 'invoice')  { updateInvoicePanel(); }
     });
   });
 
@@ -719,6 +881,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-load Maps SDK if key already saved
   if (config.apiKey) loadMapsSDK(config.apiKey);
+
+  // Set default period dates for time form
+  setTimePeriodDefaults();
+  renderTimeTypeRows();
 });
 
 // PWA
@@ -763,9 +929,21 @@ function updateHeaderTotal() {
   let total = 0;
   entries.forEach(e => {
     if (e.type === 'mileage') total += (e.km || 0) * config.ratePerKm;
-    else total += (e.amount || 0);
+    else if (e.type === 'expense') total += (e.amount || 0);
+    else if (e.type === 'time') total += calcTimeEarnings(e);
   });
   document.getElementById('header-total').textContent = fmt(total);
+}
+function calcTimeEarnings(e) {
+  if (!e.hours) return 0;
+  return Object.entries(e.hours).reduce((sum, [typeId, hrs]) => {
+    const tt = config.timeTypes.find(t => t.id === typeId);
+    return sum + (hrs || 0) * (tt ? tt.rate : 0);
+  }, 0);
+}
+function calcTimeTotalHours(e) {
+  if (!e.hours) return 0;
+  return Object.values(e.hours).reduce((s, h) => s + (h || 0), 0);
 }
 function checkApiKeyNotice() {
   const notice = document.getElementById('api-key-notice');
@@ -779,8 +957,11 @@ function setType(t) {
   currentType = t;
   document.getElementById('mileage-form').style.display = t==='mileage' ? 'block' : 'none';
   document.getElementById('expense-form').style.display = t==='expense'  ? 'block' : 'none';
+  document.getElementById('time-form').style.display    = t==='time'     ? 'block' : 'none';
   document.getElementById('type-mileage').className = 'type-btn' + (t==='mileage' ? ' active' : '');
   document.getElementById('type-expense').className  = 'type-btn' + (t==='expense'  ? ' active' : '');
+  document.getElementById('type-time').className     = 'type-btn' + (t==='time'     ? ' active' : '');
+  if (t === 'time') renderTimeTypeRows();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1046,6 +1227,7 @@ function formatDateLabel(ds) {
   return d.toLocaleDateString('en-NZ', { weekday:'long', month:'short', day:'numeric' });
 }
 function renderEntry(e) {
+  if (e.type === 'time') return renderTimeEntry(e);
   if (e.type === 'mileage') {
     return `<div class="entry mileage">
       <div class="entry-icon">🚗</div>
@@ -1080,6 +1262,39 @@ function renderEntry(e) {
     </div>
   </div>`;
 }
+function renderTimeEntry(e) {
+  const totalHrs = calcTimeTotalHours(e);
+  const totalEarnings = calcTimeEarnings(e);
+  const rows = Object.entries(e.hours || {}).map(([typeId, hrs]) => {
+    if (!hrs) return '';
+    const tt = config.timeTypes.find(t => t.id === typeId);
+    const name = tt ? tt.name : typeId;
+    const earn = hrs * (tt ? tt.rate : 0);
+    return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:3px">
+      <span>${name}</span><span style="font-family:var(--mono)">${hrs.toFixed(2)} hrs · ${fmt(earn)}</span>
+    </div>`;
+  }).join('');
+  const period = e.periodStart && e.periodEnd
+    ? `${formatDateLabel(e.periodStart)} – ${formatDateLabel(e.periodEnd)}`
+    : e.periodStart || '';
+  return `<div class="entry" style="border-left:3px solid var(--purple)">
+    <div class="entry-icon">🕐</div>
+    <div class="entry-body">
+      <div class="entry-top">
+        <div class="entry-name">${period}</div>
+        <div class="entry-amount" style="color:var(--purple)">${totalHrs.toFixed(2)} hrs</div>
+      </div>
+      ${rows}
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <span style="color:var(--text3);font-weight:600">Earnings</span>
+        <span style="font-family:var(--mono);color:var(--green);font-weight:700">${fmt(totalEarnings)}</span>
+      </div>
+      ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+      <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+    </div>
+  </div>`;
+}
+
 function deleteEntry(id) {
   const e = entries.find(x => x.id===id);
   if (e?.receiptIds) e.receiptIds.forEach(r => delete receipts[r]);
@@ -1117,16 +1332,19 @@ function periodEntries() {
 }
 function updateSummary() {
   const pe = periodEntries();
-  let km=0, mileReimb=0, expTotal=0;
+  let km=0, mileReimb=0, expTotal=0, timeHours=0, timeEarnings=0;
   const catTotals = {};
   pe.forEach(e => {
     if (e.type==='mileage') { km += e.km||0; mileReimb += e.reimbursement||0; }
-    else { expTotal += e.amount||0; catTotals[e.category] = (catTotals[e.category]||0)+e.amount; }
+    else if (e.type==='expense') { expTotal += e.amount||0; catTotals[e.category] = (catTotals[e.category]||0)+e.amount; }
+    else if (e.type==='time') { timeHours += calcTimeTotalHours(e); timeEarnings += calcTimeEarnings(e); }
   });
   document.getElementById('sum-miles').textContent = km.toFixed(1);
   document.getElementById('sum-mile-reimb').textContent = fmt(mileReimb);
   document.getElementById('sum-expense').textContent = fmt(expTotal);
-  document.getElementById('sum-total').textContent = fmt(mileReimb+expTotal);
+  document.getElementById('sum-hours').textContent = timeHours.toFixed(2);
+  document.getElementById('sum-earnings').textContent = fmt(timeEarnings);
+  document.getElementById('sum-total').textContent = fmt(mileReimb+expTotal+timeEarnings);
   const bd = document.getElementById('cat-breakdown');
   const cats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
   if (!cats.length) { bd.innerHTML = '<div style="color:var(--text3);font-size:13px">No expenses this period</div>'; return; }
@@ -1183,10 +1401,38 @@ function buildReport() {
 }
 function setExportPreview() { document.getElementById('export-preview').textContent = buildReport(); }
 function copyReport() { navigator.clipboard.writeText(buildReport()).then(() => showToast('Copied!', '📋')); }
-function emailReport() {
+async function emailReport() {
   const email = document.getElementById('export-email').value.trim();
   const label = document.getElementById('export-label').value || 'Expense Report';
-  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Expense Report — '+label)}&body=${encodeURIComponent(buildReport())}`;
+  const subject = 'Expense Report — ' + label;
+  const body = buildReport();
+
+  // 1. Try Web Share API (works great on mobile, and Chrome/Edge on desktop when configured)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: subject, text: body });
+      return;
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Share failed:', e);
+      // AbortError = user cancelled — fall through silently
+      else return;
+    }
+  }
+
+  // 2. Try mailto: — works if body is short enough (<2000 chars) or mail client is registered
+  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (mailto.length < 2000) {
+    window.location.href = mailto;
+    return;
+  }
+
+  // 3. Fallback: copy to clipboard and tell the user
+  try {
+    await navigator.clipboard.writeText(body);
+    showToast('Report copied — paste into your email app', '📋');
+  } catch {
+    showToast('Open your email app and paste the report manually', '📋');
+  }
 }
 function downloadCSV() {
   const pe = periodEntries();
@@ -1205,10 +1451,37 @@ function downloadCSV() {
 //  SETTINGS PAGE
 // ═══════════════════════════════════════════════════════════
 function renderSettingsPage() {
-  // API key field
   document.getElementById('setting-apikey').value = config.apiKey || '';
   document.getElementById('setting-rate').value    = config.ratePerKm;
   checkApiKeyNotice();
+
+  // Business details
+  const biz = config.bizDetails || {};
+  document.getElementById('setting-biz-name').value    = biz.name    || '';
+  document.getElementById('setting-biz-address').value = biz.address || '';
+  document.getElementById('setting-biz-email').value   = biz.email   || '';
+  document.getElementById('setting-biz-phone').value   = biz.phone   || '';
+  document.getElementById('setting-biz-bank').value    = biz.bank    || '';
+  // Client details
+  const cli = config.clientDetails || {};
+  document.getElementById('setting-client-name').value    = cli.name    || '';
+  document.getElementById('setting-client-address').value = cli.address || '';
+  document.getElementById('setting-client-email').value   = cli.email   || '';
+
+  // Time types list
+  const tl = document.getElementById('time-types-list');
+  tl.innerHTML = (config.timeTypes||[]).length ? config.timeTypes.map((t,i) => `
+    <div class="list-item">
+      <div class="list-item-icon">🕐</div>
+      <div style="flex:1">
+        <div class="list-item-name">${t.name}</div>
+        <div class="list-item-sub">${fmt(t.rate)}/hr</div>
+      </div>
+      <div class="list-item-actions" style="margin-left:8px">
+        <button class="icon-btn" onclick="editTimeTypeRate(${i})">✏️</button>
+        <button class="icon-btn" onclick="deleteTimeType(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No time types yet</div></div>';
 
   // Purposes list
   const pl = document.getElementById('purposes-list');
@@ -1488,6 +1761,353 @@ document.getElementById('confirm-modal').addEventListener('click', e => {
 document.getElementById('edit-addr-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('edit-addr-modal')) closeModal('edit-addr-modal');
 });
+
+// ═══════════════════════════════════════════════════════════
+//  TIME ENTRY
+// ═══════════════════════════════════════════════════════════
+function setTimePeriodDefaults() {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const start = new Date(y, m, 1).toISOString().split('T')[0];
+  const end   = new Date(y, m+1, 0).toISOString().split('T')[0];
+  document.getElementById('time-period-start').value = start;
+  document.getElementById('time-period-end').value   = end;
+}
+
+function renderTimeTypeRows() {
+  const container = document.getElementById('time-type-rows');
+  if (!container) return;
+  container.innerHTML = (config.timeTypes || []).map(t => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${t.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmt(t.rate)}/hr</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" id="hrs-${t.id}" min="0" step="0.25" placeholder="0"
+          style="width:80px;font-size:16px;text-align:right;padding:10px 10px"
+          oninput="updateTimeTotals()" />
+        <span style="font-size:12px;color:var(--text3)">hrs</span>
+      </div>
+    </div>`).join('');
+  updateTimeTotals();
+}
+
+function updateTimeTotals() {
+  let totalHrs = 0, totalEarnings = 0;
+  (config.timeTypes || []).forEach(t => {
+    const inp = document.getElementById('hrs-' + t.id);
+    const hrs = parseFloat(inp?.value || 0) || 0;
+    totalHrs += hrs;
+    totalEarnings += hrs * t.rate;
+  });
+  document.getElementById('time-total-hours').textContent = totalHrs.toFixed(2) + ' hrs';
+  document.getElementById('time-total-earnings').textContent = fmt(totalEarnings);
+}
+
+function saveTimeEntry() {
+  const periodStart = document.getElementById('time-period-start').value;
+  const periodEnd   = document.getElementById('time-period-end').value;
+  if (!periodStart || !periodEnd) { showToast('Select a period', '⚠️'); return; }
+  if (periodEnd < periodStart)    { showToast('End must be after start', '⚠️'); return; }
+
+  const hours = {};
+  let hasHours = false;
+  (config.timeTypes || []).forEach(t => {
+    const inp = document.getElementById('hrs-' + t.id);
+    const h = parseFloat(inp?.value || 0) || 0;
+    if (h > 0) { hours[t.id] = h; hasHours = true; }
+  });
+  if (!hasHours) { showToast('Enter at least some hours', '⚠️'); return; }
+
+  const entry = {
+    id: uid(), type: 'time',
+    date: periodStart, // used for grouping/filtering
+    periodStart, periodEnd, hours,
+    notes: document.getElementById('time-notes').value.trim(),
+    createdAt: Date.now()
+  };
+  entries.unshift(entry);
+  save();
+  const totalHrs = calcTimeTotalHours(entry);
+  showToast(totalHrs.toFixed(2) + ' hrs saved!', '🕐');
+
+  // Reset
+  renderTimeTypeRows();
+  document.getElementById('time-notes').value = '';
+  setTimePeriodDefaults();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TIME TYPE SETTINGS
+// ═══════════════════════════════════════════════════════════
+function addTimeType() {
+  const name = document.getElementById('new-timetype-name').value.trim();
+  const rate = parseFloat(document.getElementById('new-timetype-rate').value) || 0;
+  if (!name) { showToast('Enter a name', '⚠️'); return; }
+  config.timeTypes = config.timeTypes || [];
+  config.timeTypes.push({ id: uid(), name, rate });
+  saveConfig();
+  renderSettingsPage();
+  document.getElementById('new-timetype-name').value = '';
+  document.getElementById('new-timetype-rate').value = '';
+  showToast(name + ' added', '✓');
+}
+function deleteTimeType(i) {
+  config.timeTypes.splice(i, 1);
+  saveConfig();
+  renderSettingsPage();
+  showToast('Time type removed', '🗑️');
+}
+function editTimeTypeRate(i) {
+  const t = config.timeTypes[i];
+  const newRate = prompt('Hourly rate for "' + t.name + '" ($):', t.rate);
+  if (newRate === null) return;
+  const r = parseFloat(newRate);
+  if (isNaN(r) || r < 0) { showToast('Invalid rate', '⚠️'); return; }
+  config.timeTypes[i].rate = r;
+  saveConfig();
+  renderSettingsPage();
+  showToast('Rate updated', '✓');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUSINESS & CLIENT DETAILS
+// ═══════════════════════════════════════════════════════════
+function saveBusinessDetails() {
+  config.bizDetails = {
+    name:    document.getElementById('setting-biz-name').value.trim(),
+    address: document.getElementById('setting-biz-address').value.trim(),
+    email:   document.getElementById('setting-biz-email').value.trim(),
+    phone:   document.getElementById('setting-biz-phone').value.trim(),
+    bank:    document.getElementById('setting-biz-bank').value.trim()
+  };
+  saveConfig();
+  showToast('Business details saved', '✓');
+}
+function saveClientDetails() {
+  config.clientDetails = {
+    name:    document.getElementById('setting-client-name').value.trim(),
+    address: document.getElementById('setting-client-address').value.trim(),
+    email:   document.getElementById('setting-client-email').value.trim()
+  };
+  saveConfig();
+  showToast('Client details saved', '✓');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INVOICE PANEL
+// ═══════════════════════════════════════════════════════════
+function setInvPeriod(el, p) {
+  document.querySelectorAll('#inv-period-row .period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentInvPeriod = p;
+  updateInvoicePanel();
+}
+
+function invPeriodEntries() {
+  const now = new Date();
+  return entries.filter(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    if (currentInvPeriod === 'month')   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (currentInvPeriod === 'quarter') return Math.floor(d.getMonth()/3) === Math.floor(now.getMonth()/3) && d.getFullYear() === now.getFullYear();
+    if (currentInvPeriod === 'year')    return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+}
+
+function updateInvoicePanel() {
+  const pe = invPeriodEntries();
+  let hours = 0, earnings = 0, mileReimb = 0, expenses = 0;
+  pe.forEach(e => {
+    if (e.type === 'time') { hours += calcTimeTotalHours(e); earnings += calcTimeEarnings(e); }
+    else if (e.type === 'mileage') mileReimb += e.reimbursement || 0;
+    else if (e.type === 'expense') expenses += e.amount || 0;
+  });
+  document.getElementById('inv-hours').textContent    = hours.toFixed(2);
+  document.getElementById('inv-expenses').textContent = fmt(expenses + mileReimb);
+  document.getElementById('inv-total').textContent    = fmt(earnings + mileReimb + expenses);
+
+  // Auto-set invoice number and date
+  const invNum = document.getElementById('inv-number');
+  if (!invNum.value) invNum.value = 'INV-' + String((config.lastInvoiceNumber || 0) + 1).padStart(3, '0');
+  const invDate = document.getElementById('inv-date');
+  if (!invDate.value) invDate.value = new Date().toISOString().split('T')[0];
+  const invLabel = document.getElementById('inv-period-label');
+  if (!invLabel.value) invLabel.value = new Date().toLocaleDateString('en-NZ', { month: 'long', year: 'numeric' });
+}
+
+function buildInvoiceHTML(forPrint) {
+  const pe = invPeriodEntries();
+  const incTime     = document.getElementById('inv-include-time').checked;
+  const incMileage  = document.getElementById('inv-include-mileage').checked;
+  const incExpenses = document.getElementById('inv-include-expenses').checked;
+  const invNum      = document.getElementById('inv-number').value || 'INV-001';
+  const invDate     = document.getElementById('inv-date').value;
+  const invLabel    = document.getElementById('inv-period-label').value;
+  const biz         = config.bizDetails || {};
+  const cli         = config.clientDetails || {};
+
+  let timeRows = '', mileRows = '', expRows = '';
+  let timeTotal = 0, mileTotal = 0, expTotal = 0;
+
+  if (incTime) {
+    const timeEntries = pe.filter(e => e.type === 'time');
+    if (timeEntries.length) {
+      // Group hours by time type across all entries
+      const typeTotals = {};
+      timeEntries.forEach(e => {
+        Object.entries(e.hours || {}).forEach(([tid, hrs]) => {
+          typeTotals[tid] = (typeTotals[tid] || 0) + (hrs || 0);
+        });
+      });
+      timeRows = Object.entries(typeTotals).map(([tid, hrs]) => {
+        const tt = config.timeTypes.find(t => t.id === tid);
+        if (!tt || !hrs) return '';
+        const earn = hrs * tt.rate;
+        timeTotal += earn;
+        return `<tr><td>${tt.name}</td><td style="text-align:center">${hrs.toFixed(2)}</td><td style="text-align:right">${fmt(tt.rate)}/hr</td><td style="text-align:right">${fmt(earn)}</td></tr>`;
+      }).join('');
+    }
+  }
+
+  if (incMileage) {
+    const mileEntries = pe.filter(e => e.type === 'mileage');
+    mileEntries.forEach(e => {
+      mileTotal += e.reimbursement || 0;
+      mileRows += `<tr><td>${e.purpose} — ${e.route}</td><td style="text-align:center">${e.km} km</td><td style="text-align:right">${fmt(e.rateUsed || config.ratePerKm)}/km</td><td style="text-align:right">${fmt(e.reimbursement)}</td></tr>`;
+    });
+  }
+
+  if (incExpenses) {
+    const expEntries = pe.filter(e => e.type === 'expense');
+    expEntries.forEach(e => {
+      expTotal += e.amount || 0;
+      expRows += `<tr><td>${e.description} (${e.category})</td><td></td><td></td><td style="text-align:right">${fmt(e.amount)}</td></tr>`;
+    });
+  }
+
+  const grandTotal = timeTotal + mileTotal + expTotal;
+  const formattedDate = invDate ? new Date(invDate + 'T00:00:00').toLocaleDateString('en-NZ', { day:'numeric', month:'long', year:'numeric' }) : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Invoice ${invNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: white; padding: 40px; max-width: 800px; margin: 0 auto; }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .inv-title { font-size: 36px; font-weight: 800; color: #1a1a2e; letter-spacing: -1px; }
+  .inv-meta { text-align: right; color: #666; line-height: 1.8; }
+  .inv-meta strong { color: #1a1a2e; font-size: 15px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 36px; padding: 24px; background: #f7f8fc; border-radius: 10px; }
+  .party-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+  .party-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .party-detail { color: #555; line-height: 1.6; font-size: 13px; white-space: pre-line; }
+  .period-bar { background: #1a1a2e; color: white; padding: 10px 18px; border-radius: 6px; margin-bottom: 24px; font-size: 13px; }
+  .period-bar strong { font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  thead th { background: #1a1a2e; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: left; }
+  thead th:last-child { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .section-header td { background: #f0f2f9; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; }
+  .subtotal-row td { font-weight: 600; background: #f7f8fc; }
+  .total-box { margin-top: 20px; text-align: right; }
+  .total-box .grand { font-size: 28px; font-weight: 800; color: #1a1a2e; }
+  .total-box .grand-label { font-size: 13px; color: #888; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bank-box { margin-top: 32px; padding: 18px; background: #f0f8f0; border: 1px solid #c3e6c3; border-radius: 8px; }
+  .bank-box .bank-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2d7a2d; margin-bottom: 6px; }
+  .bank-box .bank-num { font-size: 20px; font-weight: 800; color: #1a1a2e; font-family: monospace; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #aaa; font-size: 11px; text-align: center; }
+  @media print { body { padding: 20px; } @page { margin: 15mm; } }
+</style></head><body>
+
+<div class="inv-header">
+  <div>
+    <div class="inv-title">INVOICE</div>
+    <div style="color:#888;margin-top:4px;font-size:13px">🕐 Time &amp; Expense Log</div>
+  </div>
+  <div class="inv-meta">
+    <strong>${invNum}</strong><br>
+    Date: ${formattedDate}<br>
+    Period: ${invLabel}
+  </div>
+</div>
+
+<div class="parties">
+  <div>
+    <div class="party-label">From</div>
+    <div class="party-name">${biz.name || 'Your Name'}</div>
+    <div class="party-detail">${biz.address || ''}${biz.phone ? '
+' + biz.phone : ''}${biz.email ? '
+' + biz.email : ''}</div>
+  </div>
+  <div>
+    <div class="party-label">To</div>
+    <div class="party-name">${cli.name || 'Client Name'}</div>
+    <div class="party-detail">${cli.address || ''}${cli.email ? '
+' + cli.email : ''}</div>
+  </div>
+</div>
+
+<div class="period-bar">Billing period: <strong>${invLabel}</strong></div>
+
+<table>
+  <thead><tr><th>Description</th><th style="text-align:center">Qty / Hrs</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+  <tbody>
+    ${timeRows ? `<tr class="section-header"><td colspan="4">Time</td></tr>${timeRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Time Subtotal</td><td style="text-align:right">${fmt(timeTotal)}</td></tr>` : ''}
+    ${mileRows ? `<tr class="section-header"><td colspan="4">Mileage</td></tr>${mileRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Mileage Subtotal</td><td style="text-align:right">${fmt(mileTotal)}</td></tr>` : ''}
+    ${expRows  ? `<tr class="section-header"><td colspan="4">Expenses</td></tr>${expRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Expenses Subtotal</td><td style="text-align:right">${fmt(expTotal)}</td></tr>` : ''}
+  </tbody>
+</table>
+
+<div class="total-box">
+  <div class="grand-label">Total Due</div>
+  <div class="grand">${fmt(grandTotal)}</div>
+</div>
+
+${biz.bank ? `<div class="bank-box"><div class="bank-label">💳 Payment — Bank Transfer</div><div class="bank-num">${biz.bank}</div><div style="font-size:12px;color:#555;margin-top:4px">Reference: ${invNum}</div></div>` : ''}
+
+<div class="footer">Generated by Time &amp; Expense Log · ${new Date().toLocaleDateString('en-NZ')}</div>
+</body></html>`;
+}
+
+function previewInvoice() {
+  const w = window.open('', '_blank');
+  w.document.write(buildInvoiceHTML(false));
+  w.document.close();
+}
+
+function generateInvoice() {
+  const invNum = document.getElementById('inv-number').value || 'INV-001';
+  const w = window.open('', '_blank');
+  w.document.write(buildInvoiceHTML(true));
+  w.document.close();
+  // Auto-trigger print dialog for PDF save
+  setTimeout(() => { try { w.print(); } catch(e) {} }, 500);
+  // Increment invoice number
+  const num = parseInt((invNum.match(/\d+$/) || ['0'])[0]) || 0;
+  config.lastInvoiceNumber = num;
+  const prefix = invNum.replace(/\d+$/, '');
+  document.getElementById('inv-number').value = prefix + String(num + 1).padStart(3, '0');
+  saveConfig();
+}
+
+async function emailInvoice() {
+  const invNum = document.getElementById('inv-number').value || 'Invoice';
+  const invLabel = document.getElementById('inv-period-label').value || '';
+  const subject = `Invoice ${invNum} — ${invLabel}`;
+  const body = `Please find attached invoice ${invNum} for ${invLabel}.\n\nTotal: ${document.getElementById('inv-total').textContent}\n\nPlease view the full invoice at: [paste invoice link here]`;
+  const cli = config.clientDetails || {};
+
+  if (navigator.share) {
+    try { await navigator.share({ title: subject, text: body }); return; } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  const mailto = `mailto:${encodeURIComponent(cli.email||'')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (mailto.length < 2000) { window.location.href = mailto; return; }
+  await navigator.clipboard.writeText(body);
+  showToast('Invoice text copied — paste into email', '📋');
+}
 </script>
 </body>
 </html>
