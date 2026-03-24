@@ -304,6 +304,12 @@
       display: flex; align-items: center; gap: 8px;
     }
     .ac-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--green); background: var(--green-dim); padding: 2px 8px; border-radius: 20px; font-weight: 600; margin-top: 4px; }
+    /* ── INVOICE TOGGLES ── */
+    .inv-toggle-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--bg3); border: 1.5px solid var(--border2); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); transition: all 0.15s; user-select: none; }
+    .inv-toggle-row[data-on="true"] { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .inv-toggle-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border2); background: var(--bg3); flex-shrink: 0; transition: all 0.15s; }
+    .inv-toggle-row[data-on="true"] .inv-toggle-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .inv-toggle-row[data-on="true"] .inv-toggle-dot::after { content: '✓'; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 900; height: 100%; }
   </style>
 </head>
 <body>
@@ -608,19 +614,19 @@
 
       <div class="card">
         <div class="card-title">Include in Invoice</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
-            <input type="checkbox" id="inv-include-time" checked style="width:18px;height:18px;accent-color:var(--accent)" />
-            Time entries &amp; earnings
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
-            <input type="checkbox" id="inv-include-mileage" checked style="width:18px;height:18px;accent-color:var(--accent)" />
-            Mileage reimbursement
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--text)">
-            <input type="checkbox" id="inv-include-expenses" checked style="width:18px;height:18px;accent-color:var(--accent)" />
-            Expenses
-          </label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="inv-toggle-row" id="toggle-time" onclick="toggleInvInclude('time')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>🕐 Time entries &amp; earnings</span>
+          </div>
+          <div class="inv-toggle-row" id="toggle-mileage" onclick="toggleInvInclude('mileage')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>🚗 Mileage reimbursement</span>
+          </div>
+          <div class="inv-toggle-row" id="toggle-expenses" onclick="toggleInvInclude('expenses')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>💳 Expenses</span>
+          </div>
         </div>
       </div>
 
@@ -1939,9 +1945,9 @@ function updateInvoicePanel() {
 
 function buildInvoiceHTML(forPrint) {
   const pe = invPeriodEntries();
-  const incTime     = document.getElementById('inv-include-time').checked;
-  const incMileage  = document.getElementById('inv-include-mileage').checked;
-  const incExpenses = document.getElementById('inv-include-expenses').checked;
+  const incTime     = document.getElementById('toggle-time').dataset.on === 'true';
+  const incMileage  = document.getElementById('toggle-mileage').dataset.on === 'true';
+  const incExpenses = document.getElementById('toggle-expenses').dataset.on === 'true';
   const invNum      = document.getElementById('inv-number').value || 'INV-001';
   const invDate     = document.getElementById('inv-date').value;
   const invLabel    = document.getElementById('inv-period-label').value;
@@ -1961,13 +1967,17 @@ function buildInvoiceHTML(forPrint) {
           typeTotals[tid] = (typeTotals[tid] || 0) + (hrs || 0);
         });
       });
-      timeRows = Object.entries(typeTotals).map(([tid, hrs]) => {
+      const timeRowParts = [];
+      Object.entries(typeTotals).forEach(([tid, hrs]) => {
+        if (!hrs) return;
         const tt = config.timeTypes.find(t => t.id === tid);
-        if (!tt || !hrs) return '';
-        const earn = hrs * tt.rate;
+        const name = tt ? tt.name : tid; // fall back to id if type was deleted
+        const rate = tt ? tt.rate : 0;
+        const earn = hrs * rate;
         timeTotal += earn;
-        return `<tr><td>${tt.name}</td><td style="text-align:center">${hrs.toFixed(2)}</td><td style="text-align:right">${fmt(tt.rate)}/hr</td><td style="text-align:right">${fmt(earn)}</td></tr>`;
-      }).join('');
+        timeRowParts.push(`<tr><td>${name}</td><td style="text-align:center">${hrs.toFixed(2)}</td><td style="text-align:right">${tt ? fmt(rate)+'/hr' : 'N/A'}</td><td style="text-align:right">${fmt(earn)}</td></tr>`);
+      });
+      timeRows = timeRowParts.join('');
     }
   }
 
@@ -2102,6 +2112,12 @@ async function emailInvoice() {
   if (mailto.length < 2000) { window.location.href = mailto; return; }
   await navigator.clipboard.writeText(body);
   showToast('Invoice text copied — paste into email', '📋');
+}
+
+function toggleInvInclude(type) {
+  const el = document.getElementById('toggle-' + type);
+  const isOn = el.dataset.on === 'true';
+  el.dataset.on = isOn ? 'false' : 'true';
 }
 </script>
 </body>
