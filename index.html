@@ -280,6 +280,30 @@
     .install-banner.visible { display: flex; }
     .install-text { flex: 1; font-size: 13px; color: var(--text2); }
     .install-text strong { color: var(--accent2); display: block; font-size: 14px; }
+    /* ── ADDRESS AUTOCOMPLETE ── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+      background: var(--bg2); border: 1.5px solid var(--accent);
+      border-radius: var(--radius-sm); z-index: 50;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 12px 14px; font-size: 13px; color: var(--text);
+      cursor: pointer; border-bottom: 1px solid var(--border);
+      line-height: 1.4; transition: background 0.1s;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:active, .autocomplete-item.hover { background: var(--accent-dim); }
+    .autocomplete-item .ac-main { font-weight: 600; }
+    .autocomplete-item .ac-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .autocomplete-spinner {
+      padding: 12px 14px; font-size: 12px; color: var(--text3);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ac-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--green); background: var(--green-dim); padding: 2px 8px; border-radius: 20px; font-weight: 600; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -499,8 +523,8 @@
       <div class="settings-section">
         <div class="settings-section-title">Google Maps API</div>
         <div id="api-key-notice" class="api-notice" style="display:none">
-          <strong>⚠️ API key required for distance calculation</strong>
-          Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — enable the <em>Distance Matrix API</em>. Paste it below.
+          <strong>⚠️ API key required</strong>
+          Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — enable the <em>Distance Matrix API</em> and <em>Places API</em>. Paste it below.
         </div>
         <div class="card">
           <div class="field">
@@ -545,7 +569,13 @@
           <div class="card-title">Add Destination</div>
           <div class="field"><label>Name</label><input type="text" id="new-dest-name" placeholder="e.g. Home" /></div>
           <div class="field"><label>Emoji Icon</label><input type="text" id="new-dest-icon" placeholder="🏠" maxlength="4" style="width:80px" /></div>
-          <div class="field"><label>Full Address (for distance)</label><input type="text" id="new-dest-address" placeholder="123 Main St, Auckland" /></div>
+          <div class="field">
+            <label>Address</label>
+            <div class="autocomplete-wrap" id="new-dest-wrap">
+              <input type="text" id="new-dest-address" placeholder="Start typing an address…" autocomplete="off" oninput="onAddressInput(this,'new-dest-suggestions')" onblur="delayHide('new-dest-suggestions')" />
+              <div class="autocomplete-list" id="new-dest-suggestions"></div>
+            </div>
+          </div>
           <button class="btn btn-primary" onclick="addDestination()" style="margin-top:4px">Add Destination</button>
         </div>
       </div>
@@ -567,6 +597,28 @@
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('confirm-modal')">Cancel</button>
       <button class="btn btn-danger" style="flex:1" onclick="clearAllData()">Delete all</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ADDRESS MODAL -->
+<div class="modal-overlay" id="edit-addr-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="edit-addr-title">Edit Address</div>
+    <div class="field">
+      <label>Address</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="edit-addr-input" placeholder="Start typing an address…" autocomplete="off"
+          oninput="onAddressInput(this,'edit-addr-suggestions')"
+          onblur="delayHide('edit-addr-suggestions')" />
+        <div class="autocomplete-list" id="edit-addr-suggestions"></div>
+      </div>
+      <div id="edit-addr-verified" style="margin-top:6px"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('edit-addr-modal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditedAddress()">Save</button>
     </div>
   </div>
 </div>
@@ -1164,11 +1216,13 @@ function renderSettingsPage() {
   dl.innerHTML = config.destinations.length ? config.destinations.map((d, i) => `
     <div class="list-item">
       <div class="list-item-icon">${d.icon}</div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="list-item-name">${d.name}</div>
-        <div class="list-item-sub">${d.address || '⚠️ No address set'}</div>
+        <div class="list-item-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.address
+          ? `<span style="color:var(--green)">✓</span> ${d.address}`
+          : `<span style="color:var(--amber)">⚠️ No address — tap ✏️ to add</span>`}</div>
       </div>
-      <div class="list-item-actions" style="margin-left:auto">
+      <div class="list-item-actions" style="margin-left:8px;flex-shrink:0">
         <button class="icon-btn" onclick="editDestAddress(${i})">✏️</button>
         <button class="icon-btn" onclick="deleteDest(${i})">🗑️</button>
       </div>
@@ -1230,6 +1284,10 @@ function addDestination() {
   const icon    = document.getElementById('new-dest-icon').value.trim() || '📍';
   const address = document.getElementById('new-dest-address').value.trim();
   if (!name) { showToast('Enter a name', '⚠️'); return; }
+  if (!address) { showToast('Enter an address', '⚠️'); return; }
+  if (!document.getElementById('new-dest-address').dataset.verified) {
+    showToast('Please select an address from the suggestions', '⚠️'); return;
+  }
   config.destinations.push({ id: uid(), name, icon, address });
   saveConfig();
   renderDestGrid();
@@ -1237,6 +1295,7 @@ function addDestination() {
   document.getElementById('new-dest-name').value = '';
   document.getElementById('new-dest-icon').value = '';
   document.getElementById('new-dest-address').value = '';
+  delete document.getElementById('new-dest-address').dataset.verified;
   showToast(`${name} added`, '📍');
 }
 function deleteDest(i) {
@@ -1246,14 +1305,143 @@ function deleteDest(i) {
   renderSettingsPage();
   showToast('Destination removed', '🗑️');
 }
+
+let editingDestIdx = null;
 function editDestAddress(i) {
+  editingDestIdx = i;
   const d = config.destinations[i];
-  const newAddr = prompt(`Address for "${d.name}":`, d.address);
-  if (newAddr === null) return;
-  config.destinations[i].address = newAddr.trim();
+  document.getElementById('edit-addr-title').textContent = `📍 Edit address — ${d.name}`;
+  const inp = document.getElementById('edit-addr-input');
+  inp.value = d.address || '';
+  inp.dataset.verified = d.address ? '1' : '';
+  document.getElementById('edit-addr-verified').innerHTML = d.address
+    ? `<span class="ac-verified">✓ Verified</span>` : '';
+  document.getElementById('edit-addr-suggestions').classList.remove('open');
+  document.getElementById('edit-addr-modal').classList.add('open');
+}
+function saveEditedAddress() {
+  const inp = document.getElementById('edit-addr-input');
+  if (!inp.value.trim()) { showToast('Enter an address', '⚠️'); return; }
+  if (!inp.dataset.verified) { showToast('Please select an address from the suggestions', '⚠️'); return; }
+  config.destinations[editingDestIdx].address = inp.value.trim();
   saveConfig();
   renderSettingsPage();
-  showToast('Address updated', '📍');
+  closeModal('edit-addr-modal');
+  showToast('Address updated ✓', '📍');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GOOGLE PLACES AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════
+let acTimer = null;
+let acSessionToken = null;
+
+function onAddressInput(inputEl, listId) {
+  // Clear verified state whenever user types
+  delete inputEl.dataset.verified;
+  const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
+  if (verifiedEl) verifiedEl.innerHTML = '';
+
+  const list = document.getElementById(listId);
+  const query = inputEl.value.trim();
+  if (query.length < 3) { list.classList.remove('open'); return; }
+
+  clearTimeout(acTimer);
+  list.innerHTML = `<div class="autocomplete-spinner">⏳ Searching…</div>`;
+  list.classList.add('open');
+
+  acTimer = setTimeout(() => fetchPlaceSuggestions(query, inputEl, listId), 350);
+}
+
+async function fetchPlaceSuggestions(query, inputEl, listId) {
+  const list = document.getElementById(listId);
+  if (!config.apiKey) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Save your API key in Settings first</div>`;
+    return;
+  }
+
+  // Use a session token to group autocomplete + place detail calls for billing
+  if (!acSessionToken) acSessionToken = uid();
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
+      `?input=${encodeURIComponent(query)}` +
+      `&components=country:nz` +
+      `&sessiontoken=${acSessionToken}` +
+      `&key=${config.apiKey}`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === 'REQUEST_DENIED') {
+      list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ API key error — check Places API is enabled</div>`;
+      return;
+    }
+    if (!data.predictions?.length) {
+      list.innerHTML = `<div class="autocomplete-spinner">No results found</div>`;
+      return;
+    }
+
+    list.innerHTML = data.predictions.map(p => {
+      const main = p.structured_formatting?.main_text || p.description;
+      const sub  = p.structured_formatting?.secondary_text || '';
+      return `<div class="autocomplete-item"
+        onmousedown="selectPlace('${p.place_id}','${escapeAttr(p.description)}','${inputEl.id}','${listId}')"
+        ontouchstart="selectPlace('${p.place_id}','${escapeAttr(p.description)}','${inputEl.id}','${listId}')">
+        <div class="ac-main">${main}</div>
+        ${sub ? `<div class="ac-sub">${sub}</div>` : ''}
+      </div>`;
+    }).join('');
+    list.classList.add('open');
+
+  } catch (err) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ Network error</div>`;
+  }
+}
+
+async function selectPlace(placeId, description, inputId, listId) {
+  const inputEl = document.getElementById(inputId);
+  const list    = document.getElementById(listId);
+
+  // Fetch the verified formatted address via Place Details
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/details/json` +
+      `?place_id=${placeId}` +
+      `&fields=formatted_address` +
+      `&sessiontoken=${acSessionToken}` +
+      `&key=${config.apiKey}`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+    const addr = data.result?.formatted_address || description;
+
+    inputEl.value = addr;
+    inputEl.dataset.verified = '1';
+    acSessionToken = null; // Reset — session complete
+
+    // Show verified badge
+    const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
+    if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
+
+  } catch {
+    // Fallback to description text if details call fails
+    inputEl.value = description;
+    inputEl.dataset.verified = '1';
+  }
+
+  list.classList.remove('open');
+}
+
+function delayHide(listId) {
+  // Small delay so onmousedown/ontouchstart can fire before blur hides the list
+  setTimeout(() => {
+    const list = document.getElementById(listId);
+    if (list) list.classList.remove('open');
+  }, 200);
+}
+
+function escapeAttr(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1268,6 +1456,9 @@ function clearAllData() {
 }
 document.getElementById('confirm-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('confirm-modal')) closeModal('confirm-modal');
+});
+document.getElementById('edit-addr-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('edit-addr-modal')) closeModal('edit-addr-modal');
 });
 </script>
 </body>
