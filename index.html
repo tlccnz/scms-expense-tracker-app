@@ -716,6 +716,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Show API key notice if missing
   checkApiKeyNotice();
+
+  // Auto-load Maps SDK if key already saved
+  if (config.apiKey) loadMapsSDK(config.apiKey);
 });
 
 // PWA
@@ -838,14 +841,11 @@ function renderRibbon() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  DISTANCE CALCULATION (Google Maps Distance Matrix API)
+//  DISTANCE CALCULATION — Maps JS SDK (no CORS issues)
 // ═══════════════════════════════════════════════════════════
 function scheduleDistanceCalc() {
   clearTimeout(distanceTimer);
-  if (tripStops.length < 2) {
-    resetDistanceBar();
-    return;
-  }
+  if (tripStops.length < 2) { resetDistanceBar(); return; }
   setDistanceBar('calculating', '…', 'Calculating route…');
   distanceTimer = setTimeout(calcDistance, 600);
 }
@@ -870,46 +870,56 @@ function setDistanceBar(state, distText, statusText, reimbText, dim) {
   st.textContent = statusText || '';
 }
 
-async function calcDistance() {
+function calcDistance() {
   if (!config.apiKey) {
     setDistanceBar('error', '— km', '⚠️ No API key — add one in Settings', '$—', true);
     return;
   }
-
-  // Build ordered list of addresses from stops
-  const dests = tripStops.map(id => config.destinations.find(d => d.id === id));
-  const missing = dests.find(d => !d || !d.address.trim());
-  if (missing) {
-    setDistanceBar('error', '— km', `⚠️ "${missing?.name}" has no address — add one in Settings`, '$—', true);
+  if (!window.google?.maps) {
+    setDistanceBar('error', '— km', '⚠️ Maps not loaded yet — try again', '$—', true);
     return;
   }
 
-  // Sum consecutive leg distances
-  let totalMeters = 0;
-  try {
-    for (let i = 0; i < dests.length - 1; i++) {
-      const origin = encodeURIComponent(dests[i].address);
-      const dest   = encodeURIComponent(dests[i+1].address);
-      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${dest}&units=metric&key=${config.apiKey}`;
-
-      const res  = await fetch(url);
-      const data = await res.json();
-
-      if (data.status !== 'OK') throw new Error(data.status);
-      const element = data.rows[0]?.elements[0];
-      if (element?.status !== 'OK') throw new Error(element?.status || 'No route');
-      totalMeters += element.distance.value;
-    }
-
-    currentDistKm = totalMeters / 1000;
-    const reimb = currentDistKm * config.ratePerKm;
-    setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
-
-  } catch (err) {
-    console.error('Distance API error:', err);
-    setDistanceBar('error', '— km', `⚠️ API error: ${err.message}`, '$—', true);
-    currentDistKm = 0;
+  const dests = tripStops.map(id => config.destinations.find(d => d.id === id));
+  const missing = dests.find(d => !d?.address?.trim());
+  if (missing) {
+    setDistanceBar('error', '— km', `⚠️ "${missing?.name}" has no address — add in Settings`, '$—', true);
+    return;
   }
+
+  // Chain legs sequentially using the SDK's DistanceMatrixService
+  const service = new google.maps.DistanceMatrixService();
+  let totalMeters = 0;
+  let legIdx = 0;
+
+  function nextLeg() {
+    if (legIdx >= dests.length - 1) {
+      currentDistKm = totalMeters / 1000;
+      const reimb = currentDistKm * config.ratePerKm;
+      setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
+      return;
+    }
+    service.getDistanceMatrix({
+      origins: [dests[legIdx].address],
+      destinations: [dests[legIdx + 1].address],
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC
+    }, (res, status) => {
+      if (status !== 'OK') {
+        setDistanceBar('error', '— km', `⚠️ API error: ${status}`, '$—', true);
+        currentDistKm = 0; return;
+      }
+      const el = res.rows[0]?.elements[0];
+      if (el?.status !== 'OK') {
+        setDistanceBar('error', '— km', `⚠️ No route found`, '$—', true);
+        currentDistKm = 0; return;
+      }
+      totalMeters += el.distance.value;
+      legIdx++;
+      nextLeg();
+    });
+  }
+  nextLeg();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1229,24 +1239,50 @@ function renderSettingsPage() {
     </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No destinations yet</div></div>';
 }
 
-// API key
+// API key — loads the Maps JS SDK when saved
 function saveApiKey() {
   const key = document.getElementById('setting-apikey').value.trim();
   config.apiKey = key;
   saveConfig();
   checkApiKeyNotice();
+  if (key) loadMapsSDK(key);
   showToast('API key saved', '🔑');
 }
-async function testApiKey() {
+
+function testApiKey() {
   const key = document.getElementById('setting-apikey').value.trim();
   if (!key) { showToast('Enter a key first', '⚠️'); return; }
+  if (!window.google?.maps) {
+    showToast('Loading Maps SDK…', '⏳');
+    loadMapsSDK(key, () => testApiKey());
+    return;
+  }
   showToast('Testing…', '⏳');
-  try {
-    const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=Auckland&destinations=Wellington&units=metric&key=${key}`);
-    const data = await res.json();
-    if (data.status === 'OK') showToast('API key works! ✓', '✅');
-    else showToast('Key error: ' + data.status, '❌');
-  } catch { showToast('Network error', '❌'); }
+  // Quick geocode test using the SDK's Geocoder (no CORS issues)
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: 'Auckland, New Zealand' }, (results, status) => {
+    if (status === 'OK') showToast('API key works! ✓', '✅');
+    else showToast('Key error: ' + status, '❌');
+  });
+}
+
+// Dynamically inject the Maps JS SDK <script> tag
+function loadMapsSDK(key, callback) {
+  // Remove any existing Maps script so we can reload with new key
+  const existing = document.getElementById('gmaps-sdk');
+  if (existing) existing.remove();
+  if (window.google?.maps) delete window.google.maps;
+
+  window._mapsCallback = function() {
+    if (callback) callback();
+  };
+
+  const s = document.createElement('script');
+  s.id  = 'gmaps-sdk';
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=_mapsCallback`;
+  s.async = true;
+  s.onerror = () => showToast('Failed to load Maps SDK — check API key', '❌');
+  document.head.appendChild(s);
 }
 
 // Rate
@@ -1331,58 +1367,59 @@ function saveEditedAddress() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  GOOGLE PLACES AUTOCOMPLETE
+//  GOOGLE PLACES AUTOCOMPLETE — Maps JS SDK (no CORS issues)
 // ═══════════════════════════════════════════════════════════
 let acTimer = null;
 let acSessionToken = null;
 
+function getAcToken() {
+  if (!acSessionToken && window.google?.maps?.places)
+    acSessionToken = new google.maps.places.AutocompleteSessionToken();
+  return acSessionToken;
+}
+
 function onAddressInput(inputEl, listId) {
-  // Clear verified state whenever user types
   delete inputEl.dataset.verified;
   const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
   if (verifiedEl) verifiedEl.innerHTML = '';
 
-  const list = document.getElementById(listId);
+  const list  = document.getElementById(listId);
   const query = inputEl.value.trim();
   if (query.length < 3) { list.classList.remove('open'); return; }
 
   clearTimeout(acTimer);
   list.innerHTML = `<div class="autocomplete-spinner">⏳ Searching…</div>`;
   list.classList.add('open');
-
   acTimer = setTimeout(() => fetchPlaceSuggestions(query, inputEl, listId), 350);
 }
 
-async function fetchPlaceSuggestions(query, inputEl, listId) {
+function fetchPlaceSuggestions(query, inputEl, listId) {
   const list = document.getElementById(listId);
+
   if (!config.apiKey) {
     list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Save your API key in Settings first</div>`;
     return;
   }
+  if (!window.google?.maps?.places) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Maps not loaded yet — save your API key first</div>`;
+    return;
+  }
 
-  // Use a session token to group autocomplete + place detail calls for billing
-  if (!acSessionToken) acSessionToken = uid();
-
-  try {
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
-      `?input=${encodeURIComponent(query)}` +
-      `&components=country:nz` +
-      `&sessiontoken=${acSessionToken}` +
-      `&key=${config.apiKey}`;
-
-    const res  = await fetch(url);
-    const data = await res.json();
-
-    if (data.status === 'REQUEST_DENIED') {
-      list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ API key error — check Places API is enabled</div>`;
-      return;
-    }
-    if (!data.predictions?.length) {
+  const svc = new google.maps.places.AutocompleteService();
+  svc.getPlacePredictions({
+    input: query,
+    sessionToken: getAcToken(),
+    componentRestrictions: { country: 'nz' }
+  }, (predictions, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS || !predictions?.length) {
       list.innerHTML = `<div class="autocomplete-spinner">No results found</div>`;
       return;
     }
-
-    list.innerHTML = data.predictions.map(p => {
+    if (status !== google.maps.places.PlacesServiceStatus.OK) {
+      list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ Places error: ${status}</div>`;
+      return;
+    }
+    list.innerHTML = predictions.map(p => {
       const main = p.structured_formatting?.main_text || p.description;
       const sub  = p.structured_formatting?.secondary_text || '';
       return `<div class="autocomplete-item"
@@ -1393,53 +1430,44 @@ async function fetchPlaceSuggestions(query, inputEl, listId) {
       </div>`;
     }).join('');
     list.classList.add('open');
-
-  } catch (err) {
-    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ Network error</div>`;
-  }
+  });
 }
 
-async function selectPlace(placeId, description, inputId, listId) {
+function selectPlace(placeId, description, inputId, listId) {
   const inputEl = document.getElementById(inputId);
   const list    = document.getElementById(listId);
+  list.classList.remove('open');
 
-  // Fetch the verified formatted address via Place Details
-  try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json` +
-      `?place_id=${placeId}` +
-      `&fields=formatted_address` +
-      `&sessiontoken=${acSessionToken}` +
-      `&key=${config.apiKey}`;
+  if (!window.google?.maps?.places) {
+    inputEl.value = description;
+    inputEl.dataset.verified = '1';
+    return;
+  }
 
-    const res  = await fetch(url);
-    const data = await res.json();
-    const addr = data.result?.formatted_address || description;
+  // Use a throw-away div as the PlacesService anchor (required by SDK)
+  const dummy = document.createElement('div');
+  const svc   = new google.maps.places.PlacesService(dummy);
+  svc.getDetails({
+    placeId,
+    fields: ['formatted_address'],
+    sessionToken: acSessionToken
+  }, (place, status) => {
+    const addr = (status === google.maps.places.PlacesServiceStatus.OK && place?.formatted_address)
+      ? place.formatted_address
+      : description;
 
     inputEl.value = addr;
     inputEl.dataset.verified = '1';
-    acSessionToken = null; // Reset — session complete
+    acSessionToken = null; // session complete — reset token
 
-    // Show verified badge
     const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
     if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
-
-  } catch {
-    // Fallback to description text if details call fails
-    inputEl.value = description;
-    inputEl.dataset.verified = '1';
-  }
-
-  list.classList.remove('open');
+  });
 }
 
 function delayHide(listId) {
-  // Small delay so onmousedown/ontouchstart can fire before blur hides the list
-  setTimeout(() => {
-    const list = document.getElementById(listId);
-    if (list) list.classList.remove('open');
-  }, 200);
+  setTimeout(() => { document.getElementById(listId)?.classList.remove('open'); }, 200);
 }
-
 function escapeAttr(str) {
   return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
