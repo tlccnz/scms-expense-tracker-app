@@ -889,12 +889,12 @@ function calcDistance() {
 
   // Chain legs sequentially using the SDK's DistanceMatrixService
   const service = new google.maps.DistanceMatrixService();
-  let totalMeters = 0;
+  let totalKm = 0; // each leg rounded up to next whole km
   let legIdx = 0;
 
   function nextLeg() {
     if (legIdx >= dests.length - 1) {
-      currentDistKm = totalMeters / 1000;
+      currentDistKm = totalKm;
       const reimb = currentDistKm * config.ratePerKm;
       setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
       return;
@@ -914,7 +914,7 @@ function calcDistance() {
         setDistanceBar('error', '— km', `⚠️ No route found`, '$—', true);
         currentDistKm = 0; return;
       }
-      totalMeters += el.distance.value;
+      totalKm += Math.ceil(el.distance.value / 1000); // round up per leg
       legIdx++;
       nextLeg();
     });
