@@ -2038,16 +2038,11 @@ function buildInvoiceHTML(forPrint) {
   <div>
     <div class="party-label">From</div>
     <div class="party-name">${biz.name || 'Your Name'}</div>
-    <div class="party-detail">${biz.address || ''}${biz.phone ? '
-' + biz.phone : ''}${biz.email ? '
-' + biz.email : ''}</div>
-  </div>
+    <div class="party-detail">${[biz.address, biz.phone, biz.email].filter(Boolean).join('\\n')}</div>\n  </div>
   <div>
     <div class="party-label">To</div>
     <div class="party-name">${cli.name || 'Client Name'}</div>
-    <div class="party-detail">${cli.address || ''}${cli.email ? '
-' + cli.email : ''}</div>
-  </div>
+    <div class="party-detail">${[cli.address, cli.email].filter(Boolean).join('\\n')}</div>\n  </div>
 </div>
 
 <div class="period-bar">Billing period: <strong>${invLabel}</strong></div>
