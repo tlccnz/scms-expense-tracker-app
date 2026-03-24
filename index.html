@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1520" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ExpenseLog" />
+  <title>ExpenseLog</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1520;
+      --bg2: #161d2e;
+      --bg3: #1e2740;
+      --surface: #1a2236;
+      --surface2: #222c42;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.13);
+      --text: #e8edf8;
+      --text2: #8a96b0;
+      --text3: #5a6480;
+      --accent: #4f8ef7;
+      --accent2: #6ba3ff;
+      --accent-dim: rgba(79,142,247,0.15);
+      --green: #34d97b;
+      --green-dim: rgba(52,217,123,0.12);
+      --amber: #f5a623;
+      --amber-dim: rgba(245,166,35,0.12);
+      --red: #ff5c5c;
+      --red-dim: rgba(255,92,92,0.12);
+      --purple: #a78bfa;
+      --purple-dim: rgba(167,139,250,0.12);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font: 'Sora', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; -webkit-tap-highlight-color: transparent; overflow: hidden; }
+
+    #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; }
+
+    /* ── HEADER ── */
+    .header { padding: calc(var(--safe-top) + 16px) 20px 14px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 10; }
+    .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-subtitle { font-size: 12px; color: var(--text3); margin-top: 1px; }
+    .header-badge { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; font-family: var(--mono); }
+
+    /* ── TABS ── */
+    .tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab { flex: 1; padding: 11px 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 0.3px; user-select: none; transition: all 0.2s; }
+    .tab.active { color: var(--accent2); border-bottom-color: var(--accent); background: rgba(79,142,247,0.05); }
+    .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
+    /* ── SCROLL AREA ── */
+    .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(var(--safe-bottom) + 24px); }
+    .scroll-area::-webkit-scrollbar { display: none; }
+
+    /* ── PANELS ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── CARDS ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .card-title::before { content: ''; display: block; width: 3px; height: 12px; background: var(--accent); border-radius: 2px; }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 12px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; background: var(--bg3); border: 1.5px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 16px; padding: 13px 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none; appearance: none; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    input::placeholder { color: var(--text3); }
+    textarea { resize: none; height: 72px; line-height: 1.5; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a96b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    input[type="date"] { color-scheme: dark; }
+    .row { display: flex; gap: 10px; }
+    .row .field { flex: 1; }
+
+    /* ── BUTTONS ── */
+    .btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 15px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: var(--font); font-size: 15px; font-weight: 700; transition: all 0.15s; user-select: none; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--green); color: #071a0e; }
+    .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+    .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,92,92,0.2); }
+    .btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,0.25); }
+    .btn-sm { padding: 9px 14px; font-size: 13px; width: auto; }
+
+    /* ── TYPE TOGGLE ── */
+    .type-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+    .type-btn { flex: 1; padding: 14px 10px; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.2s; user-select: none; }
+    .type-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent2); }
+    .type-btn-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+    /* ── TRIP BUILDER ── */
+    .trip-purpose-select select { font-size: 15px; font-weight: 600; }
+
+    .stop-ribbon {
+      display: flex; align-items: center; gap: 0;
+      overflow-x: auto; padding: 4px 0 10px;
+      -ms-overflow-style: none; scrollbar-width: none;
+      min-height: 52px;
+    }
+    .stop-ribbon::-webkit-scrollbar { display: none; }
+    .stop-chip {
+      flex-shrink: 0; display: flex; align-items: center; gap: 0;
+    }
+    .stop-chip-label {
+      background: var(--accent); color: white;
+      padding: 8px 13px; border-radius: 20px;
+      font-size: 13px; font-weight: 700;
+      white-space: nowrap; position: relative;
+      cursor: pointer;
+    }
+    .stop-chip-label:active { opacity: 0.8; }
+    .stop-chip-label .remove-x {
+      display: inline-block; margin-left: 6px;
+      font-size: 11px; opacity: 0.7; font-weight: 900;
+    }
+    .stop-arrow {
+      color: var(--text3); font-size: 14px;
+      padding: 0 4px; flex-shrink: 0;
+    }
+    .stop-empty {
+      color: var(--text3); font-size: 13px;
+      font-style: italic; padding: 8px 4px;
+    }
+
+    .dest-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+      margin-top: 4px;
+    }
+    .dest-btn {
+      padding: 13px 10px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border2); background: var(--bg3);
+      color: var(--text); font-family: var(--font); font-size: 13px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      user-select: none; line-height: 1.3;
+    }
+    .dest-btn:active { transform: scale(0.96); background: var(--accent-dim); border-color: var(--accent); }
+    .dest-btn .dest-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+    /* distance result */
+    .distance-bar {
+      background: var(--bg3); border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .distance-bar.calculating { border-color: var(--accent); animation: pulse 1.2s infinite; }
+    .distance-bar.ready { border-color: var(--green); }
+    .distance-bar.error { border-color: var(--red); }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+    .dist-left .dist-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    .dist-left .dist-value { font-size: 26px; font-weight: 700; font-family: var(--mono); color: var(--green); margin-top: 2px; }
+    .dist-left .dist-value.dim { color: var(--text3); font-size: 16px; }
+    .dist-right { text-align: right; }
+    .dist-right .reimb-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    .dist-right .reimb-value { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--amber); margin-top: 2px; }
+    .dist-right .reimb-value.dim { color: var(--text3); font-size: 14px; }
+    .dist-status { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+    /* ── RECEIPT ── */
+    .receipt-drop { border: 2px dashed var(--border2); border-radius: var(--radius-sm); padding: 20px 16px; text-align: center; cursor: pointer; background: var(--bg3); position: relative; }
+    .receipt-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: none; background: none; padding: 0; }
+    .receipt-icon { font-size: 24px; margin-bottom: 4px; }
+    .receipt-text { font-size: 13px; color: var(--text2); font-weight: 500; }
+    .receipt-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .receipt-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .receipt-thumb-wrap { position: relative; display: inline-block; }
+    .receipt-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border2); }
+    .receipt-remove { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; border: none; border-radius: 50%; width: 17px; height: 17px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+
+    /* ── CATEGORY PILLS ── */
+    .cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .cat-pill { padding: 10px 6px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--bg3); text-align: center; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .cat-pill.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .cat-pill-icon { font-size: 18px; margin-bottom: 3px; }
+    .cat-pill-label { font-size: 11px; font-weight: 600; color: var(--text2); }
+    .cat-pill.selected .cat-pill-label { color: var(--accent2); }
+
+    /* ── HISTORY ── */
+    .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip { flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); transition: all 0.15s; user-select: none; }
+    .filter-chip.active { background: var(--accent-dim); border-color: rgba(79,142,247,0.4); color: var(--accent2); }
+    .entry-list { display: flex; flex-direction: column; gap: 8px; }
+    .entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; display: flex; gap: 10px; align-items: flex-start; position: relative; overflow: hidden; }
+    .entry::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+    .entry.mileage::before { background: var(--accent); }
+    .entry.expense::before { background: var(--amber); }
+    .entry-icon { font-size: 20px; flex-shrink: 0; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border-radius: 9px; }
+    .entry-body { flex: 1; min-width: 0; }
+    .entry-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .entry-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-amount { font-size: 14px; font-weight: 700; font-family: var(--mono); flex-shrink: 0; }
+    .entry.mileage .entry-amount { color: var(--accent2); }
+    .entry.expense .entry-amount { color: var(--amber); }
+    .entry-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .entry-route { font-size: 11px; color: var(--text2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-note { font-size: 12px; color: var(--text2); margin-top: 3px; font-style: italic; }
+    .entry-receipt-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--green); background: var(--green-dim); padding: 2px 7px; border-radius: 20px; margin-top: 4px; font-weight: 600; }
+    .entry-actions { display: flex; gap: 8px; margin-top: 7px; }
+    .del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px; padding: 3px 6px; border-radius: 6px; }
+    .del-btn:active { color: var(--red); }
+    .date-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); padding: 8px 4px 6px; }
+    .empty { text-align: center; padding: 48px 20px; }
+    .empty-icon { font-size: 44px; margin-bottom: 10px; }
+    .empty-text { font-size: 15px; font-weight: 600; color: var(--text2); }
+    .empty-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+
+    /* ── SUMMARY ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+    .stat-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    .stat-value { font-size: 22px; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+    .stat-value.green { color: var(--green); }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.blue  { color: var(--accent2); }
+    .period-row { display: flex; gap: 6px; margin-bottom: 12px; }
+    .period-btn { flex: 1; padding: 9px 4px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .period-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent2); }
+    .export-preview { background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 14px; font-family: var(--mono); font-size: 11px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; }
+    .export-preview::-webkit-scrollbar { width: 4px; }
+    .export-preview::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── SETTINGS ── */
+    .settings-section { margin-bottom: 20px; }
+    .settings-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 10px; padding-left: 4px; }
+    .setting-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .setting-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .setting-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .list-editor { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 8px; }
+    .list-item { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-icon { font-size: 20px; flex-shrink: 0; width: 32px; text-align: center; }
+    .list-item-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+    .list-item-sub { font-size: 11px; color: var(--text3); }
+    .list-item-actions { display: flex; gap: 6px; }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; color: var(--text3); border-radius: 6px; }
+    .icon-btn:active { color: var(--red); }
+
+    .add-row { display: flex; gap: 8px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .add-row input { flex: 1; font-size: 14px; padding: 8px 10px; }
+    .add-row select { width: auto; padding: 8px 30px 8px 10px; font-size: 14px; }
+
+    /* ── API KEY NOTICE ── */
+    .api-notice { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.3); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; font-size: 13px; color: var(--amber); line-height: 1.6; }
+    .api-notice a { color: var(--amber); }
+    .api-notice strong { display: block; margin-bottom: 2px; font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 100; align-items: flex-end; }
+    .modal-overlay.open { display: flex; animation: fadeIn 0.18s; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .modal { width: 100%; max-width: 480px; margin: 0 auto; background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0; padding: 20px 20px calc(var(--safe-bottom) + 20px); border: 1px solid var(--border2); border-bottom: none; max-height: 90dvh; overflow-y: auto; animation: slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1); }
+    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 18px; }
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: calc(var(--safe-bottom) + 16px); left: 50%; transform: translateX(-50%) translateY(80px); background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 11px 20px; border-radius: 100px; font-size: 13px; font-weight: 600; z-index: 200; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── INSTALL BANNER ── */
+    .install-banner { display: none; background: var(--accent-dim); border: 1px solid rgba(79,142,247,0.3); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; align-items: center; gap: 10px; }
+    .install-banner.visible { display: flex; }
+    .install-text { flex: 1; font-size: 13px; color: var(--text2); }
+    .install-text strong { color: var(--accent2); display: block; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="header-title">💼 ExpenseLog</div>
+      <div class="header-subtitle" id="header-date"></div>
+    </div>
+    <div class="header-badge" id="header-total">$0.00</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="add"><span class="tab-icon">➕</span>Add</div>
+    <div class="tab" data-tab="history"><span class="tab-icon">📋</span>History</div>
+    <div class="tab" data-tab="summary"><span class="tab-icon">📊</span>Summary</div>
+    <div class="tab" data-tab="settings"><span class="tab-icon">⚙️</span>Settings</div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area">
+
+    <!-- ══════════════════════════════════════
+         ADD PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel active" id="panel-add">
+
+      <div class="install-banner" id="install-banner">
+        <span style="font-size:22px">📲</span>
+        <div class="install-text"><strong>Add to Home Screen</strong>Use like a real app</div>
+        <button class="btn btn-primary btn-sm" id="install-btn">Install</button>
+      </div>
+
+      <!-- TYPE TOGGLE -->
+      <div class="type-toggle">
+        <div class="type-btn active" id="type-mileage" onclick="setType('mileage')">
+          <span class="type-btn-icon">🚗</span>Mileage
+        </div>
+        <div class="type-btn" id="type-expense" onclick="setType('expense')">
+          <span class="type-btn-icon">💳</span>Expense
+        </div>
+      </div>
+
+      <!-- ── MILEAGE FORM ── -->
+      <div id="mileage-form">
+
+        <!-- Date -->
+        <div class="card">
+          <div class="card-title">Trip Date</div>
+          <input type="date" id="mile-date" />
+        </div>
+
+        <!-- Purpose -->
+        <div class="card">
+          <div class="card-title">Purpose</div>
+          <select id="mile-purpose">
+            <option value="">— Select purpose —</option>
+          </select>
+        </div>
+
+        <!-- Stop builder -->
+        <div class="card">
+          <div class="card-title">Build Your Route</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">Tap stops in order to build your trip. Tap a stop in the route to remove it.</p>
+          <!-- Route ribbon -->
+          <div class="stop-ribbon" id="stop-ribbon">
+            <span class="stop-empty">No stops yet — tap below to start</span>
+          </div>
+          <!-- Destination buttons -->
+          <div class="dest-grid" id="dest-grid">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Distance result -->
+        <div class="distance-bar" id="distance-bar">
+          <div class="dist-left">
+            <div class="dist-label">Distance</div>
+            <div class="dist-value dim" id="dist-value">— km</div>
+            <div class="dist-status" id="dist-status">Add stops to calculate</div>
+          </div>
+          <div class="dist-right">
+            <div class="reimb-label">Reimbursement</div>
+            <div class="reimb-value dim" id="reimb-value">$—</div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card">
+          <div class="card-title">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></div>
+          <textarea id="mile-notes" placeholder="Any extra details…"></textarea>
+        </div>
+
+        <button class="btn btn-success" onclick="saveMileage()">✓ Save Trip</button>
+      </div>
+
+      <!-- ── EXPENSE FORM ── -->
+      <div id="expense-form" style="display:none">
+        <div class="card">
+          <div class="card-title">Expense Details</div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="exp-date" />
+          </div>
+          <div class="field">
+            <label>Amount ($)</label>
+            <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <input type="text" id="exp-description" placeholder="e.g. Lunch with client" />
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <div class="cat-grid" id="cat-grid">
+              <div class="cat-pill selected" data-cat="Meals" onclick="selectCat(this)"><div class="cat-pill-icon">🍽️</div><div class="cat-pill-label">Meals</div></div>
+              <div class="cat-pill" data-cat="Parking" onclick="selectCat(this)"><div class="cat-pill-icon">🅿️</div><div class="cat-pill-label">Parking</div></div>
+              <div class="cat-pill" data-cat="Fuel" onclick="selectCat(this)"><div class="cat-pill-icon">⛽</div><div class="cat-pill-label">Fuel</div></div>
+              <div class="cat-pill" data-cat="Hotel" onclick="selectCat(this)"><div class="cat-pill-icon">🏨</div><div class="cat-pill-label">Hotel</div></div>
+              <div class="cat-pill" data-cat="Supplies" onclick="selectCat(this)"><div class="cat-pill-icon">📦</div><div class="cat-pill-label">Supplies</div></div>
+              <div class="cat-pill" data-cat="Other" onclick="selectCat(this)"><div class="cat-pill-icon">📎</div><div class="cat-pill-label">Other</div></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Notes (optional)</label>
+            <textarea id="exp-notes" placeholder="Any extra details…"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Receipt Photo</div>
+          <div class="receipt-drop">
+            <input type="file" id="receipt-input" accept="image/*" capture="environment" multiple onchange="handleReceipts(event)" />
+            <div class="receipt-icon">📷</div>
+            <div class="receipt-text">Tap to take photo or upload</div>
+            <div class="receipt-sub">Stored on this device</div>
+          </div>
+          <div class="receipt-preview" id="receipt-preview"></div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveExpense()">✓ Save Expense</button>
+      </div>
+
+    </div><!-- /panel-add -->
+
+    <!-- ══════════════════════════════════════
+         HISTORY PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-history">
+      <div class="filter-bar">
+        <div class="filter-chip active" onclick="setFilter(this,'all')">All</div>
+        <div class="filter-chip" onclick="setFilter(this,'mileage')">🚗 Mileage</div>
+        <div class="filter-chip" onclick="setFilter(this,'expense')">💳 Expenses</div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SUMMARY PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-summary">
+      <div class="period-row">
+        <div class="period-btn active" onclick="setPeriod(this,'month')">Month</div>
+        <div class="period-btn" onclick="setPeriod(this,'quarter')">Quarter</div>
+        <div class="period-btn" onclick="setPeriod(this,'year')">Year</div>
+        <div class="period-btn" onclick="setPeriod(this,'all')">All</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">Total km</div><div class="stat-value blue" id="sum-miles">0</div></div>
+        <div class="stat-box"><div class="stat-label">km Reimb.</div><div class="stat-value green" id="sum-mile-reimb">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Expenses</div><div class="stat-value amber" id="sum-expense">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total Claim</div><div class="stat-value green" id="sum-total">$0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">By Category</div>
+        <div id="cat-breakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Export &amp; Email</div>
+        <div class="field">
+          <label>Your email address</label>
+          <input type="email" id="export-email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label>Period label</label>
+          <input type="text" id="export-label" />
+        </div>
+        <div class="field">
+          <div class="card-title" style="margin-bottom:8px">Preview</div>
+          <div class="export-preview" id="export-preview"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <button class="btn btn-ghost" style="flex:1" onclick="copyReport()">📋 Copy</button>
+          <button class="btn btn-primary" style="flex:1" onclick="emailReport()">✉️ Email</button>
+        </div>
+        <button class="btn btn-ghost" onclick="downloadCSV()">⬇️ Download CSV</button>
+      </div>
+
+      <div class="card" style="border-color:var(--red-dim)">
+        <div class="card-title" style="color:var(--red)">Danger Zone</div>
+        <button class="btn btn-danger" onclick="confirmClear()">🗑️ Clear All Data</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SETTINGS PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-settings">
+
+      <!-- Google Maps API Key -->
+      <div class="settings-section">
+        <div class="settings-section-title">Google Maps API</div>
+        <div id="api-key-notice" class="api-notice" style="display:none">
+          <strong>⚠️ API key required for distance calculation</strong>
+          Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — enable the <em>Distance Matrix API</em>. Paste it below.
+        </div>
+        <div class="card">
+          <div class="field">
+            <label>Google Maps API Key</label>
+            <input type="password" id="setting-apikey" placeholder="AIza…" autocomplete="off" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary" style="flex:1" onclick="saveApiKey()">Save Key</button>
+            <button class="btn btn-ghost btn-sm" onclick="testApiKey()">Test</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mileage rate -->
+      <div class="settings-section">
+        <div class="settings-section-title">Mileage Rate</div>
+        <div class="card">
+          <div class="field">
+            <label>Rate per km ($) — NZ IRD rate</label>
+            <input type="number" id="setting-rate" step="0.001" min="0" placeholder="0.000" />
+          </div>
+          <button class="btn btn-ghost" onclick="saveRate()" style="margin-top:8px">Save Rate</button>
+        </div>
+      </div>
+
+      <!-- Trip purposes -->
+      <div class="settings-section">
+        <div class="settings-section-title">Trip Purposes</div>
+        <div class="list-editor" id="purposes-list"></div>
+        <div class="add-row" style="margin-top:8px">
+          <input type="text" id="new-purpose-input" placeholder="Add new purpose…" />
+          <button class="btn btn-primary btn-sm" onclick="addPurpose()">Add</button>
+        </div>
+      </div>
+
+      <!-- Destinations -->
+      <div class="settings-section">
+        <div class="settings-section-title">Destinations</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;padding-left:2px">Each destination needs a full address for Google Maps distance calculation.</p>
+        <div class="list-editor" id="destinations-list"></div>
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">Add Destination</div>
+          <div class="field"><label>Name</label><input type="text" id="new-dest-name" placeholder="e.g. Home" /></div>
+          <div class="field"><label>Emoji Icon</label><input type="text" id="new-dest-icon" placeholder="🏠" maxlength="4" style="width:80px" /></div>
+          <div class="field"><label>Full Address (for distance)</label><input type="text" id="new-dest-address" placeholder="123 Main St, Auckland" /></div>
+          <button class="btn btn-primary" onclick="addDestination()" style="margin-top:4px">Add Destination</button>
+        </div>
+      </div>
+
+    </div><!-- /panel-settings -->
+
+  </div><!-- /scroll-area -->
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ Clear all data?</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6">This permanently deletes all entries. Cannot be undone.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="clearAllData()">Delete all</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DEFAULT CONFIG  — used on first run, then overridden by
+//  whatever the user saves in Settings
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_CONFIG = {
+  apiKey: '',
+  ratePerKm: 1.17,   // NZ IRD published rate (current)
+  purposes: [
+    'Client visit',
+    'Office commute',
+    'Airport transfer',
+    'Site inspection',
+    'Training / conference',
+    'Other business'
+  ],
+  destinations: [
+    { id: 'd1', name: 'Home',    icon: '🏠', address: '' },
+    { id: 'd2', name: 'Office',  icon: '🏢', address: '' },
+    { id: 'd3', name: 'Airport', icon: '✈️', address: '' },
+    { id: 'd4', name: 'Client',  icon: '🤝', address: '' }
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let config   = loadConfig();
+let entries  = JSON.parse(localStorage.getItem('et_entries')  || '[]');
+let receipts = JSON.parse(localStorage.getItem('et_receipts') || '{}');
+let currentType    = 'mileage';
+let currentFilter  = 'all';
+let currentPeriod  = 'month';
+let selectedCat    = 'Meals';
+let pendingReceipts = [];
+let tripStops      = [];   // array of destination ids
+let currentDistKm  = 0;
+let distanceTimer  = null;
+let deferredPrompt = null;
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIG HELPERS
+// ═══════════════════════════════════════════════════════════
+function loadConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('et_config') || 'null');
+    if (!saved) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    // Merge defaults so new keys appear automatically
+    return Object.assign({}, DEFAULT_CONFIG, saved);
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+}
+function saveConfig() {
+  localStorage.setItem('et_config', JSON.stringify(config));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Header date
+  document.getElementById('header-date').textContent =
+    new Date().toLocaleDateString('en-NZ', { weekday:'long', month:'long', day:'numeric' });
+
+  setTodayDates();
+  populatePurposeSelect();
+  renderDestGrid();
+  updateHeaderTotal();
+  renderHistory();
+  updateSummary();
+  setExportPreview();
+  renderSettingsPage();
+
+  document.getElementById('export-label').value =
+    new Date().toLocaleDateString('en-NZ', { month:'long', year:'numeric' });
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+      if (t.dataset.tab === 'summary')  { updateSummary(); setExportPreview(); }
+      if (t.dataset.tab === 'history')  { renderHistory(); }
+      if (t.dataset.tab === 'settings') { renderSettingsPage(); }
+    });
+  });
+
+  document.getElementById('export-email').addEventListener('input', setExportPreview);
+  document.getElementById('export-label').addEventListener('input', setExportPreview);
+
+  // Show API key notice if missing
+  checkApiKeyNotice();
+});
+
+// PWA
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('visible');
+});
+document.getElementById('install-btn')?.addEventListener('click', () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    document.getElementById('install-banner').classList.remove('visible');
+    deferredPrompt = null;
+  });
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function save() {
+  localStorage.setItem('et_entries',  JSON.stringify(entries));
+  localStorage.setItem('et_receipts', JSON.stringify(receipts));
+  updateHeaderTotal();
+}
+function setTodayDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mile-date').value = today;
+  document.getElementById('exp-date').value  = today;
+}
+function fmt(n)      { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function fmtKm(n)    { return parseFloat(n||0).toFixed(1) + ' km'; }
+function uid()       { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function showToast(msg, emoji='✓') {
+  const t = document.getElementById('toast');
+  t.textContent = emoji + ' ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function updateHeaderTotal() {
+  let total = 0;
+  entries.forEach(e => {
+    if (e.type === 'mileage') total += (e.km || 0) * config.ratePerKm;
+    else total += (e.amount || 0);
+  });
+  document.getElementById('header-total').textContent = fmt(total);
+}
+function checkApiKeyNotice() {
+  const notice = document.getElementById('api-key-notice');
+  if (notice) notice.style.display = config.apiKey ? 'none' : 'block';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TYPE TOGGLE
+// ═══════════════════════════════════════════════════════════
+function setType(t) {
+  currentType = t;
+  document.getElementById('mileage-form').style.display = t==='mileage' ? 'block' : 'none';
+  document.getElementById('expense-form').style.display = t==='expense'  ? 'block' : 'none';
+  document.getElementById('type-mileage').className = 'type-btn' + (t==='mileage' ? ' active' : '');
+  document.getElementById('type-expense').className  = 'type-btn' + (t==='expense'  ? ' active' : '');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  POPULATE PURPOSE SELECT
+// ═══════════════════════════════════════════════════════════
+function populatePurposeSelect() {
+  const sel = document.getElementById('mile-purpose');
+  sel.innerHTML = '<option value="">— Select purpose —</option>' +
+    config.purposes.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DESTINATION GRID
+// ═══════════════════════════════════════════════════════════
+function renderDestGrid() {
+  const grid = document.getElementById('dest-grid');
+  grid.innerHTML = config.destinations.map(d => `
+    <button class="dest-btn" onclick="addStop('${d.id}')">
+      <span class="dest-icon">${d.icon}</span>
+      ${d.name}
+    </button>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRIP STOP BUILDER
+// ═══════════════════════════════════════════════════════════
+function addStop(destId) {
+  tripStops.push(destId);
+  renderRibbon();
+  scheduleDistanceCalc();
+}
+
+function removeStop(idx) {
+  tripStops.splice(idx, 1);
+  renderRibbon();
+  scheduleDistanceCalc();
+}
+
+function renderRibbon() {
+  const ribbon = document.getElementById('stop-ribbon');
+  if (tripStops.length === 0) {
+    ribbon.innerHTML = '<span class="stop-empty">No stops yet — tap below to start</span>';
+    return;
+  }
+  ribbon.innerHTML = tripStops.map((id, i) => {
+    const dest = config.destinations.find(d => d.id === id);
+    const name = dest ? dest.name : '?';
+    const icon = dest ? dest.icon : '📍';
+    const arrow = i < tripStops.length - 1 ? '<span class="stop-arrow">›</span>' : '';
+    return `<div class="stop-chip">
+      <div class="stop-chip-label" onclick="removeStop(${i})" title="Tap to remove">
+        ${icon} ${name}<span class="remove-x">✕</span>
+      </div>
+      ${arrow}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DISTANCE CALCULATION (Google Maps Distance Matrix API)
+// ═══════════════════════════════════════════════════════════
+function scheduleDistanceCalc() {
+  clearTimeout(distanceTimer);
+  if (tripStops.length < 2) {
+    resetDistanceBar();
+    return;
+  }
+  setDistanceBar('calculating', '…', 'Calculating route…');
+  distanceTimer = setTimeout(calcDistance, 600);
+}
+
+function resetDistanceBar() {
+  currentDistKm = 0;
+  setDistanceBar('idle', '— km', 'Add stops to calculate', '$—', true);
+}
+
+function setDistanceBar(state, distText, statusText, reimbText, dim) {
+  const bar = document.getElementById('distance-bar');
+  const dv  = document.getElementById('dist-value');
+  const rv  = document.getElementById('reimb-value');
+  const st  = document.getElementById('dist-status');
+  bar.className = 'distance-bar' + (state==='calculating' ? ' calculating' : state==='ready' ? ' ready' : state==='error' ? ' error' : '');
+  dv.textContent = distText;
+  dv.className   = 'dist-value' + (dim ? ' dim' : '');
+  if (reimbText !== undefined) {
+    rv.textContent = reimbText || fmt(currentDistKm * config.ratePerKm);
+    rv.className   = 'reimb-value' + (dim ? ' dim' : '');
+  }
+  st.textContent = statusText || '';
+}
+
+async function calcDistance() {
+  if (!config.apiKey) {
+    setDistanceBar('error', '— km', '⚠️ No API key — add one in Settings', '$—', true);
+    return;
+  }
+
+  // Build ordered list of addresses from stops
+  const dests = tripStops.map(id => config.destinations.find(d => d.id === id));
+  const missing = dests.find(d => !d || !d.address.trim());
+  if (missing) {
+    setDistanceBar('error', '— km', `⚠️ "${missing?.name}" has no address — add one in Settings`, '$—', true);
+    return;
+  }
+
+  // Sum consecutive leg distances
+  let totalMeters = 0;
+  try {
+    for (let i = 0; i < dests.length - 1; i++) {
+      const origin = encodeURIComponent(dests[i].address);
+      const dest   = encodeURIComponent(dests[i+1].address);
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${dest}&units=metric&key=${config.apiKey}`;
+
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.status !== 'OK') throw new Error(data.status);
+      const element = data.rows[0]?.elements[0];
+      if (element?.status !== 'OK') throw new Error(element?.status || 'No route');
+      totalMeters += element.distance.value;
+    }
+
+    currentDistKm = totalMeters / 1000;
+    const reimb = currentDistKm * config.ratePerKm;
+    setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
+
+  } catch (err) {
+    console.error('Distance API error:', err);
+    setDistanceBar('error', '— km', `⚠️ API error: ${err.message}`, '$—', true);
+    currentDistKm = 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE MILEAGE
+// ═══════════════════════════════════════════════════════════
+function saveMileage() {
+  const date    = document.getElementById('mile-date').value;
+  const purpose = document.getElementById('mile-purpose').value;
+  if (!date)    { showToast('Please select a date', '⚠️'); return; }
+  if (!purpose) { showToast('Please select a purpose', '⚠️'); return; }
+  if (tripStops.length < 2) { showToast('Add at least 2 stops', '⚠️'); return; }
+  if (currentDistKm <= 0)   { showToast('Waiting for distance calculation…', '⏳'); return; }
+
+  const stopNames = tripStops
+    .map(id => config.destinations.find(d => d.id === id)?.name || '?')
+    .join(' → ');
+
+  const entry = {
+    id: uid(), type: 'mileage', date, purpose,
+    stopIds: [...tripStops], route: stopNames,
+    km: currentDistKm,
+    reimbursement: currentDistKm * config.ratePerKm,
+    rateUsed: config.ratePerKm,
+    notes: document.getElementById('mile-notes').value.trim(),
+    createdAt: Date.now()
+  };
+  entries.unshift(entry);
+  save();
+  showToast(`${fmtKm(currentDistKm)} trip saved!`, '🚗');
+
+  // Reset
+  tripStops = []; currentDistKm = 0;
+  renderRibbon(); resetDistanceBar();
+  document.getElementById('mile-purpose').value = '';
+  document.getElementById('mile-notes').value = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPENSE
+// ═══════════════════════════════════════════════════════════
+function selectCat(el) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCat = el.dataset.cat;
+}
+function handleReceipts(e) {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingReceipts.push({ id: uid(), dataUrl: ev.target.result });
+      renderReceiptPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderReceiptPreviews() {
+  document.getElementById('receipt-preview').innerHTML = pendingReceipts.map(r => `
+    <div class="receipt-thumb-wrap">
+      <img class="receipt-thumb" src="${r.dataUrl}" alt="Receipt" />
+      <button class="receipt-remove" onclick="removeReceipt('${r.id}')">✕</button>
+    </div>`).join('');
+}
+function removeReceipt(id) {
+  pendingReceipts = pendingReceipts.filter(r => r.id !== id);
+  renderReceiptPreviews();
+}
+function saveExpense() {
+  const date   = document.getElementById('exp-date').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value);
+  const desc   = document.getElementById('exp-description').value.trim();
+  if (!date)          { showToast('Please enter a date', '⚠️'); return; }
+  if (!amount || amount <= 0) { showToast('Please enter an amount', '⚠️'); return; }
+  if (!desc)          { showToast('Please enter a description', '⚠️'); return; }
+
+  const id = uid();
+  const entry = {
+    id, type: 'expense', date, amount, description: desc,
+    category: selectedCat,
+    notes: document.getElementById('exp-notes').value.trim(),
+    receiptIds: pendingReceipts.map(r => r.id),
+    createdAt: Date.now()
+  };
+  pendingReceipts.forEach(r => { receipts[r.id] = r.dataUrl; });
+  entries.unshift(entry);
+  save();
+  showToast(`${fmt(amount)} expense saved!`, '💳');
+
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-description').value = '';
+  document.getElementById('exp-notes').value = '';
+  document.getElementById('receipt-input').value = '';
+  pendingReceipts = [];
+  renderReceiptPreviews();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════════════
+function setFilter(el, f) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = f;
+  renderHistory();
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const filtered = entries.filter(e => currentFilter==='all' || e.type===currentFilter);
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No entries yet</div><div class="empty-sub">Add your first entry above</div></div>`;
+    return;
+  }
+  const groups = {};
+  filtered.forEach(e => { (groups[e.date] = groups[e.date]||[]).push(e); });
+  list.innerHTML = Object.keys(groups).sort((a,b) => b.localeCompare(a)).map(date => `
+    <div><div class="date-label">${formatDateLabel(date)}</div>
+    <div class="entry-list">${groups[date].map(renderEntry).join('')}</div></div>
+  `).join('');
+}
+function formatDateLabel(ds) {
+  const d = new Date(ds+'T00:00:00'), today = new Date(); today.setHours(0,0,0,0);
+  const diff = (today - d)/86400000;
+  if (diff===0) return 'Today';
+  if (diff===1) return 'Yesterday';
+  return d.toLocaleDateString('en-NZ', { weekday:'long', month:'short', day:'numeric' });
+}
+function renderEntry(e) {
+  if (e.type === 'mileage') {
+    return `<div class="entry mileage">
+      <div class="entry-icon">🚗</div>
+      <div class="entry-body">
+        <div class="entry-top">
+          <div class="entry-name">${e.purpose}</div>
+          <div class="entry-amount">${fmtKm(e.km)}</div>
+        </div>
+        <div class="entry-route">${e.route || ''}</div>
+        <div class="entry-meta">${fmt(e.reimbursement)} reimbursement · @${fmt(e.rateUsed||config.ratePerKm)}/km</div>
+        ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+        <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+      </div>
+    </div>`;
+  }
+  const catIcons = { Meals:'🍽️', Parking:'🅿️', Fuel:'⛽', Hotel:'🏨', Supplies:'📦', Other:'📎' };
+  const hasR = e.receiptIds?.length > 0;
+  return `<div class="entry expense">
+    <div class="entry-icon">${catIcons[e.category]||'💳'}</div>
+    <div class="entry-body">
+      <div class="entry-top">
+        <div class="entry-name">${e.description}</div>
+        <div class="entry-amount">${fmt(e.amount)}</div>
+      </div>
+      <div class="entry-meta">${e.category}</div>
+      ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+      ${hasR ? `<div class="entry-receipt-badge">📷 ${e.receiptIds.length} receipt${e.receiptIds.length>1?'s':''}</div>` : ''}
+      <div class="entry-actions">
+        ${hasR ? `<button class="del-btn" onclick="viewReceipts('${e.id}')">🔍 View</button>` : ''}
+        <button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+function deleteEntry(id) {
+  const e = entries.find(x => x.id===id);
+  if (e?.receiptIds) e.receiptIds.forEach(r => delete receipts[r]);
+  entries = entries.filter(x => x.id!==id);
+  save(); renderHistory(); updateSummary(); setExportPreview();
+  showToast('Entry deleted', '🗑️');
+}
+function viewReceipts(id) {
+  const e = entries.find(x => x.id===id);
+  if (!e?.receiptIds) return;
+  const imgs = e.receiptIds.map(r => receipts[r]).filter(Boolean);
+  if (!imgs.length) return;
+  const w = window.open('');
+  w.document.write(imgs.map(src => `<img src="${src}" style="max-width:100%;display:block;margin-bottom:10px">`).join(''));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUMMARY
+// ═══════════════════════════════════════════════════════════
+function setPeriod(el, p) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentPeriod = p;
+  updateSummary(); setExportPreview();
+}
+function periodEntries() {
+  const now = new Date();
+  return entries.filter(e => {
+    const d = new Date(e.date+'T00:00:00');
+    if (currentPeriod==='month')   return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    if (currentPeriod==='quarter') return Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3) && d.getFullYear()===now.getFullYear();
+    if (currentPeriod==='year')    return d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+function updateSummary() {
+  const pe = periodEntries();
+  let km=0, mileReimb=0, expTotal=0;
+  const catTotals = {};
+  pe.forEach(e => {
+    if (e.type==='mileage') { km += e.km||0; mileReimb += e.reimbursement||0; }
+    else { expTotal += e.amount||0; catTotals[e.category] = (catTotals[e.category]||0)+e.amount; }
+  });
+  document.getElementById('sum-miles').textContent = km.toFixed(1);
+  document.getElementById('sum-mile-reimb').textContent = fmt(mileReimb);
+  document.getElementById('sum-expense').textContent = fmt(expTotal);
+  document.getElementById('sum-total').textContent = fmt(mileReimb+expTotal);
+  const bd = document.getElementById('cat-breakdown');
+  const cats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  if (!cats.length) { bd.innerHTML = '<div style="color:var(--text3);font-size:13px">No expenses this period</div>'; return; }
+  const max = cats[0][1];
+  bd.innerHTML = cats.map(([cat,amt]) => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--text2)">${cat}</span>
+        <span style="font-family:var(--mono);color:var(--amber)">${fmt(amt)}</span>
+      </div>
+      <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(amt/max*100).toFixed(1)}%;background:var(--amber);border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════
+function buildReport() {
+  const pe = periodEntries();
+  const label = document.getElementById('export-label').value || 'Expense Report';
+  let km=0, mileReimb=0, expTotal=0;
+  const lines = [`EXPENSE REPORT — ${label.toUpperCase()}`, '='.repeat(42), ''];
+  const mileE = pe.filter(e=>e.type==='mileage');
+  const expE  = pe.filter(e=>e.type==='expense');
+  if (mileE.length) {
+    lines.push('MILEAGE', '-'.repeat(22));
+    mileE.forEach(e => {
+      km += e.km; mileReimb += e.reimbursement;
+      lines.push(`${e.date}  ${e.purpose}`);
+      lines.push(`  Route: ${e.route}`);
+      lines.push(`  ${fmtKm(e.km)} × ${fmt(e.rateUsed||config.ratePerKm)}/km = ${fmt(e.reimbursement)}`);
+      if (e.notes) lines.push(`  Note: ${e.notes}`);
+      lines.push('');
+    });
+    lines.push(`MILEAGE SUBTOTAL: ${fmtKm(km)} = ${fmt(mileReimb)}`, '');
+  }
+  if (expE.length) {
+    lines.push('EXPENSES', '-'.repeat(22));
+    expE.forEach(e => {
+      expTotal += e.amount;
+      lines.push(`${e.date}  ${e.description}`);
+      lines.push(`  Category: ${e.category}  Amount: ${fmt(e.amount)}`);
+      if (e.notes) lines.push(`  Note: ${e.notes}`);
+      if (e.receiptIds?.length) lines.push(`  Receipts: ${e.receiptIds.length} attached`);
+      lines.push('');
+    });
+    lines.push(`EXPENSES SUBTOTAL: ${fmt(expTotal)}`, '');
+  }
+  lines.push('='.repeat(42), `TOTAL CLAIM: ${fmt(mileReimb+expTotal)}`);
+  lines.push(`Generated: ${new Date().toLocaleDateString('en-NZ')}`);
+  return lines.join('\n');
+}
+function setExportPreview() { document.getElementById('export-preview').textContent = buildReport(); }
+function copyReport() { navigator.clipboard.writeText(buildReport()).then(() => showToast('Copied!', '📋')); }
+function emailReport() {
+  const email = document.getElementById('export-email').value.trim();
+  const label = document.getElementById('export-label').value || 'Expense Report';
+  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Expense Report — '+label)}&body=${encodeURIComponent(buildReport())}`;
+}
+function downloadCSV() {
+  const pe = periodEntries();
+  const header = 'Date,Type,Purpose/Description,Category,km,Reimbursement,Amount,Notes\n';
+  const rows = pe.map(e => e.type==='mileage'
+    ? [e.date,'Mileage',`"${e.purpose}"`,`"${e.route}"`,e.km.toFixed(2),e.reimbursement.toFixed(2),'',`"${e.notes||''}"`].join(',')
+    : [e.date,'Expense',`"${e.description}"`,e.category,'','',e.amount.toFixed(2),`"${e.notes||''}"`].join(',')
+  ).join('\n');
+  const blob = new Blob([header+rows], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'expenses.csv'; a.click();
+  showToast('CSV downloaded', '⬇️');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS PAGE
+// ═══════════════════════════════════════════════════════════
+function renderSettingsPage() {
+  // API key field
+  document.getElementById('setting-apikey').value = config.apiKey || '';
+  document.getElementById('setting-rate').value    = config.ratePerKm;
+  checkApiKeyNotice();
+
+  // Purposes list
+  const pl = document.getElementById('purposes-list');
+  pl.innerHTML = config.purposes.length ? config.purposes.map((p, i) => `
+    <div class="list-item">
+      <div class="list-item-icon">🗂️</div>
+      <div class="list-item-name">${p}</div>
+      <div class="list-item-actions">
+        <button class="icon-btn" onclick="deletePurpose(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No purposes yet</div></div>';
+
+  // Destinations list
+  const dl = document.getElementById('destinations-list');
+  dl.innerHTML = config.destinations.length ? config.destinations.map((d, i) => `
+    <div class="list-item">
+      <div class="list-item-icon">${d.icon}</div>
+      <div>
+        <div class="list-item-name">${d.name}</div>
+        <div class="list-item-sub">${d.address || '⚠️ No address set'}</div>
+      </div>
+      <div class="list-item-actions" style="margin-left:auto">
+        <button class="icon-btn" onclick="editDestAddress(${i})">✏️</button>
+        <button class="icon-btn" onclick="deleteDest(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No destinations yet</div></div>';
+}
+
+// API key
+function saveApiKey() {
+  const key = document.getElementById('setting-apikey').value.trim();
+  config.apiKey = key;
+  saveConfig();
+  checkApiKeyNotice();
+  showToast('API key saved', '🔑');
+}
+async function testApiKey() {
+  const key = document.getElementById('setting-apikey').value.trim();
+  if (!key) { showToast('Enter a key first', '⚠️'); return; }
+  showToast('Testing…', '⏳');
+  try {
+    const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=Auckland&destinations=Wellington&units=metric&key=${key}`);
+    const data = await res.json();
+    if (data.status === 'OK') showToast('API key works! ✓', '✅');
+    else showToast('Key error: ' + data.status, '❌');
+  } catch { showToast('Network error', '❌'); }
+}
+
+// Rate
+function saveRate() {
+  const r = parseFloat(document.getElementById('setting-rate').value);
+  if (isNaN(r) || r < 0) { showToast('Invalid rate', '⚠️'); return; }
+  config.ratePerKm = r;
+  saveConfig();
+  showToast(`Rate set to ${fmt(r)}/km`, '💰');
+}
+
+// Purposes
+function addPurpose() {
+  const inp = document.getElementById('new-purpose-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  config.purposes.push(val);
+  saveConfig();
+  populatePurposeSelect();
+  renderSettingsPage();
+  inp.value = '';
+  showToast('Purpose added', '✓');
+}
+function deletePurpose(i) {
+  config.purposes.splice(i, 1);
+  saveConfig();
+  populatePurposeSelect();
+  renderSettingsPage();
+  showToast('Purpose removed', '🗑️');
+}
+
+// Destinations
+function addDestination() {
+  const name    = document.getElementById('new-dest-name').value.trim();
+  const icon    = document.getElementById('new-dest-icon').value.trim() || '📍';
+  const address = document.getElementById('new-dest-address').value.trim();
+  if (!name) { showToast('Enter a name', '⚠️'); return; }
+  config.destinations.push({ id: uid(), name, icon, address });
+  saveConfig();
+  renderDestGrid();
+  renderSettingsPage();
+  document.getElementById('new-dest-name').value = '';
+  document.getElementById('new-dest-icon').value = '';
+  document.getElementById('new-dest-address').value = '';
+  showToast(`${name} added`, '📍');
+}
+function deleteDest(i) {
+  config.destinations.splice(i, 1);
+  saveConfig();
+  renderDestGrid();
+  renderSettingsPage();
+  showToast('Destination removed', '🗑️');
+}
+function editDestAddress(i) {
+  const d = config.destinations[i];
+  const newAddr = prompt(`Address for "${d.name}":`, d.address);
+  if (newAddr === null) return;
+  config.destinations[i].address = newAddr.trim();
+  saveConfig();
+  renderSettingsPage();
+  showToast('Address updated', '📍');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODALS / CLEAR DATA
+// ═══════════════════════════════════════════════════════════
+function confirmClear() { document.getElementById('confirm-modal').classList.add('open'); }
+function clearAllData() {
+  entries = []; receipts = {};
+  save(); renderHistory(); updateSummary(); setExportPreview();
+  closeModal('confirm-modal');
+  showToast('All data cleared', '🗑️');
+}
+document.getElementById('confirm-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('confirm-modal')) closeModal('confirm-modal');
+});
+</script>
+</body>
+</html>
