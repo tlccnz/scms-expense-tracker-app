@@ -1,0 +1,10 @@
+name = "myte-log-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "MYTE_DATA"
+id = "9a10da6f31174faba55c4dddaa4b1f5a"
+
+[vars]
+# Set ADMIN_SECRET via: wrangler secret put ADMIN_SECRET

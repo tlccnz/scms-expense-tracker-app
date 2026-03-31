@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#F2F2F7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ExpenseLog" />
+  <title>Time &amp; Expense Log</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F2F2F7;
+      --bg2: #FFFFFF;
+      --bg3: #F2F2F7;
+      --surface: #FFFFFF;
+      --surface2: #F2F2F7;
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.12);
+      --text: #000000;
+      --text2: #3C3C43;
+      --text3: #8E8E93;
+      --accent: #007AFF;
+      --accent2: #007AFF;
+      --accent-dim: rgba(0,122,255,0.12);
+      --green: #34C759;
+      --green-dim: rgba(52,199,89,0.12);
+      --amber: #FF9500;
+      --amber-dim: rgba(255,149,0,0.12);
+      --red: #FF3B30;
+      --red-dim: rgba(255,59,48,0.12);
+      --purple: #AF52DE;
+      --purple-dim: rgba(175,82,222,0.12);
+      --radius: 12px;
+      --radius-sm: 10px;
+      --radius-pill: 22px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --mono: 'SF Mono', SFMono-Regular, ui-monospace, monospace;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; -webkit-tap-highlight-color: transparent; overflow: hidden; }
+
+    #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; }
+
+    /* ── HEADER ── */
+    .header { padding: calc(var(--safe-top) + 16px) 20px 14px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 10; }
+    .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-subtitle { font-size: 12px; color: var(--text3); margin-top: 1px; }
+    .header-badge { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; font-family: var(--mono); }
+
+    /* ── TABS ── */
+    .tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab { flex: 1; padding: 11px 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 0.3px; user-select: none; transition: all 0.2s; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,122,255,0.05); }
+    .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
+    /* ── SCROLL AREA ── */
+    .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(var(--safe-bottom) + 24px); }
+    .scroll-area::-webkit-scrollbar { display: none; }
+
+    /* ── PANELS ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── CARDS ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+    .card-title::before { content: ''; display: block; width: 3px; height: 12px; background: var(--accent); border-radius: 2px; }
+
+    /* ── FORM ── */
+    .field { margin-bottom: 12px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; background: #FFFFFF; border: 1.5px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 16px; padding: 13px 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none; appearance: none; color-scheme: light; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    input::placeholder { color: var(--text3); }
+    textarea { resize: none; height: 72px; line-height: 1.5; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    input[type="date"] { color-scheme: light; }
+    .row { display: flex; gap: 10px; }
+    .row .field { flex: 1; }
+
+    /* ── BUTTONS ── */
+    .btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 15px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: var(--font); font-size: 15px; font-weight: 700; transition: all 0.15s; user-select: none; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #FFFFFF; }
+    .btn-success { background: var(--green); color: #FFFFFF; }
+    .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+    .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,92,92,0.2); }
+    .btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,0.25); }
+    .btn-sm { padding: 9px 14px; font-size: 13px; width: auto; }
+
+    /* ── TYPE TOGGLE ── */
+    .type-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+    .type-btn { flex: 1; padding: 14px 10px; border-radius: var(--radius-sm); border: 2px solid var(--border); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; transition: all 0.2s; user-select: none; }
+    .type-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .type-btn-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+    /* ── TRIP BUILDER ── */
+    .trip-purpose-select select { font-size: 15px; font-weight: 600; }
+
+    .stop-ribbon {
+      display: flex; align-items: center; gap: 0;
+      overflow-x: auto; padding: 4px 0 10px;
+      -ms-overflow-style: none; scrollbar-width: none;
+      min-height: 52px;
+    }
+    .stop-ribbon::-webkit-scrollbar { display: none; }
+    .stop-chip {
+      flex-shrink: 0; display: flex; align-items: center; gap: 0;
+    }
+    .stop-chip-label {
+      background: var(--accent); color: white;
+      padding: 8px 13px; border-radius: 20px;
+      font-size: 13px; font-weight: 700;
+      white-space: nowrap; position: relative;
+      cursor: pointer;
+    }
+    .stop-chip-label:active { opacity: 0.8; }
+    .stop-chip-label .remove-x {
+      display: inline-block; margin-left: 6px;
+      font-size: 11px; opacity: 0.7; font-weight: 900;
+    }
+    .stop-arrow {
+      color: var(--text3); font-size: 14px;
+      padding: 0 4px; flex-shrink: 0;
+    }
+    .stop-empty {
+      color: var(--text3); font-size: 13px;
+      font-style: italic; padding: 8px 4px;
+    }
+
+    .dest-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+      margin-top: 4px;
+    }
+    .dest-btn {
+      padding: 13px 10px; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border2); background: #FFFFFF;
+      color: var(--text); font-family: var(--font); font-size: 13px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      user-select: none; line-height: 1.3;
+    }
+    .dest-btn:active { transform: scale(0.96); background: var(--accent-dim); border-color: var(--accent); }
+    .dest-btn .dest-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+    /* distance result */
+    .distance-bar {
+      background: #FFFFFF; border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm); padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .distance-bar.calculating { border-color: var(--accent); animation: pulse 1.2s infinite; }
+    .distance-bar.ready { border-color: var(--green); }
+    .distance-bar.error { border-color: var(--red); }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+    .dist-left .dist-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    .dist-left .dist-value { font-size: 26px; font-weight: 700; font-family: var(--mono); color: var(--green); margin-top: 2px; }
+    .dist-left .dist-value.dim { color: var(--text3); font-size: 16px; }
+    .dist-right { text-align: right; }
+    .dist-right .reimb-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    .dist-right .reimb-value { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--amber); margin-top: 2px; }
+    .dist-right .reimb-value.dim { color: var(--text3); font-size: 14px; }
+    .dist-status { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+    /* ── RECEIPT ── */
+    .receipt-drop { border: 2px dashed var(--border2); border-radius: var(--radius-sm); padding: 20px 16px; text-align: center; cursor: pointer; background: #F2F2F7; position: relative; }
+    .receipt-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: none; background: none; padding: 0; }
+    .receipt-icon { font-size: 24px; margin-bottom: 4px; }
+    .receipt-text { font-size: 13px; color: var(--text2); font-weight: 500; }
+    .receipt-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .receipt-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .receipt-thumb-wrap { position: relative; display: inline-block; }
+    .receipt-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border2); }
+    .receipt-remove { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; border: none; border-radius: 50%; width: 17px; height: 17px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+
+    /* ── CATEGORY PILLS ── */
+    .cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .cat-pill { padding: 10px 6px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: #FFFFFF; text-align: center; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .cat-pill.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .cat-pill-icon { font-size: 18px; margin-bottom: 3px; }
+    .cat-pill-label { font-size: 11px; font-weight: 600; color: var(--text2); }
+    .cat-pill.selected .cat-pill-label { color: var(--accent2); }
+
+    /* ── HISTORY ── */
+    .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip { flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); transition: all 0.15s; user-select: none; }
+    .filter-chip.active { background: var(--accent-dim); border-color: rgba(0,122,255,0.4); color: var(--accent); }
+    .entry-list { display: flex; flex-direction: column; gap: 8px; }
+    .entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; display: flex; gap: 10px; align-items: flex-start; position: relative; overflow: hidden; }
+    .entry::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+    .entry.mileage::before { background: var(--accent); }
+    .entry.expense::before { background: var(--amber); }
+    .entry-icon { font-size: 20px; flex-shrink: 0; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: #F2F2F7; border-radius: 9px; }
+    .entry-body { flex: 1; min-width: 0; }
+    .entry-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .entry-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-amount { font-size: 14px; font-weight: 700; font-family: var(--mono); flex-shrink: 0; }
+    .entry.mileage .entry-amount { color: var(--accent2); }
+    .entry.expense .entry-amount { color: var(--amber); }
+    .entry-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .entry-route { font-size: 11px; color: var(--text2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-note { font-size: 12px; color: var(--text2); margin-top: 3px; font-style: italic; }
+    .entry-receipt-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--green); background: var(--green-dim); padding: 2px 7px; border-radius: 20px; margin-top: 4px; font-weight: 600; }
+    .entry-actions { display: flex; gap: 8px; margin-top: 7px; }
+    .del-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 13px; padding: 3px 6px; border-radius: 6px; }
+    .del-btn:active { color: var(--red); }
+    .date-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); padding: 8px 4px 6px; }
+    .empty { text-align: center; padding: 48px 20px; }
+    .empty-icon { font-size: 44px; margin-bottom: 10px; }
+    .empty-text { font-size: 15px; font-weight: 600; color: var(--text2); }
+    .empty-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+
+    /* ── SUMMARY ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+    .stat-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    .stat-value { font-size: 22px; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+    .stat-value.green { color: var(--green); }
+    .stat-value.amber { color: var(--amber); }
+    .stat-value.blue  { color: var(--accent2); }
+    .period-row { display: flex; gap: 6px; margin-bottom: 12px; }
+    .period-btn { flex: 1; padding: 9px 4px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .period-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .export-preview { background: #F2F2F7; border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 14px; font-family: var(--mono); font-size: 11px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; }
+    .export-preview::-webkit-scrollbar { width: 4px; }
+    .export-preview::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── SETTINGS ── */
+    .settings-section { margin-bottom: 20px; }
+    .settings-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 10px; padding-left: 4px; }
+    .setting-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .setting-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .setting-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .list-editor { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 8px; }
+    .list-item { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border); gap: 10px; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-icon { font-size: 20px; flex-shrink: 0; width: 32px; text-align: center; }
+    .list-item-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+    .list-item-sub { font-size: 11px; color: var(--text3); }
+    .list-item-actions { display: flex; gap: 6px; }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; color: var(--text3); border-radius: 6px; }
+    .icon-btn:active { color: var(--red); }
+
+    .add-row { display: flex; gap: 8px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .add-row input { flex: 1; font-size: 14px; padding: 8px 10px; }
+    .add-row select { width: auto; padding: 8px 30px 8px 10px; font-size: 14px; }
+
+    /* ── API KEY NOTICE ── */
+    .api-notice { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.3); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; font-size: 13px; color: var(--amber); line-height: 1.6; }
+    .api-notice a { color: var(--amber); }
+    .api-notice strong { display: block; margin-bottom: 2px; font-size: 14px; }
+
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 100; align-items: flex-end; }
+    .modal-overlay.open { display: flex; animation: fadeIn 0.18s; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .modal { width: 100%; max-width: 480px; margin: 0 auto; background: #FFFFFF; border-radius: var(--radius) var(--radius) 0 0; padding: 20px 20px calc(var(--safe-bottom) + 20px); border: 1px solid var(--border); border-bottom: none; max-height: 90dvh; overflow-y: auto; animation: slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1); box-shadow: 0 -4px 24px rgba(0,0,0,0.12); }
+    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 18px; }
+    .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: calc(var(--safe-bottom) + 16px); left: 50%; transform: translateX(-50%) translateY(80px); background: rgba(50,50,50,0.92); border: none; color: #FFFFFF; padding: 11px 20px; border-radius: 100px; font-size: 13px; font-weight: 600; z-index: 200; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── INSTALL BANNER ── */
+    .install-banner { display: none; background: var(--accent-dim); border: 1px solid rgba(79,142,247,0.3); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; align-items: center; gap: 10px; }
+    .install-banner.visible { display: flex; }
+    .install-text { flex: 1; font-size: 13px; color: var(--text2); }
+    .install-text strong { color: var(--accent2); display: block; font-size: 14px; }
+    /* ── ADDRESS AUTOCOMPLETE ── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+      background: #FFFFFF; border: 1.5px solid var(--accent);
+      border-radius: var(--radius-sm); z-index: 50;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 12px 14px; font-size: 13px; color: var(--text);
+      cursor: pointer; border-bottom: 1px solid var(--border);
+      line-height: 1.4; transition: background 0.1s;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:active, .autocomplete-item.hover { background: var(--accent-dim); }
+    .autocomplete-item .ac-main { font-weight: 600; }
+    .autocomplete-item .ac-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .autocomplete-spinner {
+      padding: 12px 14px; font-size: 12px; color: var(--text3);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ac-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--green); background: var(--green-dim); padding: 2px 8px; border-radius: 20px; font-weight: 600; margin-top: 4px; }
+    /* ── INVOICE TOGGLES ── */
+    .inv-toggle-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); background: #FFFFFF; border: 1.5px solid var(--border2); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); transition: all 0.15s; user-select: none; }
+    .inv-toggle-row[data-on="true"] { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .inv-toggle-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border2); background: #F2F2F7; flex-shrink: 0; transition: all 0.15s; }
+    .inv-toggle-row[data-on="true"] .inv-toggle-dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .inv-toggle-row[data-on="true"] .inv-toggle-dot::after { content: '✓'; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 900; height: 100%; }
+
+    /* ── AUTH SCREEN ── */
+    #auth-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 24px; z-index: 1000;
+    }
+    #auth-screen.hidden { display: none; }
+    .auth-logo { font-size: 48px; margin-bottom: 12px; }
+    .auth-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .auth-sub { font-size: 13px; color: var(--text3); margin-bottom: 32px; }
+    .auth-card { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 24px; }
+    .auth-error { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,92,92,0.25); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+    .auth-error.show { display: block; }
+
+    /* ── USER PILL in header ── */
+    .user-pill { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; padding: 5px 10px 5px 8px; cursor: pointer; }
+    .user-pill-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: white; flex-shrink: 0; }
+    .user-pill-name { font-size: 12px; font-weight: 600; color: var(--text2); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── EDIT BANNER ── */
+    .edit-banner { background: var(--amber-dim); border: 1px solid rgba(255,149,0,0.3); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: var(--amber); font-weight: 600; display: none; }
+    .edit-banner.show { display: block; }
+
+    /* ── SYNC STATUS ── */
+    .sync-bar { display: flex; align-items: center; gap: 6px; padding: 6px 16px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sync-bar.synced   { background: var(--green-dim); color: var(--green); }
+    .sync-bar.syncing  { background: var(--amber-dim); color: var(--amber); }
+    .sync-bar.offline  { background: var(--surface2); color: var(--text3); }
+    .sync-bar.error    { background: var(--red-dim); color: var(--red); }
+    .sync-bar.synced  .sync-dot { background: var(--green); }
+    .sync-bar.syncing .sync-dot { background: var(--amber); animation: pulse 1s infinite; }
+    .sync-bar.offline .sync-dot { background: var(--text3); }
+    .sync-bar.error   .sync-dot { background: var(--red); }
+  </style>
+</head>
+<body>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">🕐</div>
+  <div class="auth-title">Time &amp; Expense Log</div>
+  <div class="auth-sub">Sign in to continue</div>
+  <div class="auth-card">
+    <div class="auth-error" id="auth-error"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" inputmode="email" />
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn btn-primary" style="margin-top:18px" onclick="doLogin()" id="login-btn">Sign In</button>
+  </div>
+  <div style="margin-top:16px;font-size:12px;color:var(--text3);text-align:center;line-height:1.8">
+    Don't have an account?<br>Contact the administrator to get access.
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="header-title">🕐 Time &amp; Expense Log</div>
+      <div class="header-subtitle" id="header-date"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="header-badge" id="header-total">$0.00</div>
+      <div class="user-pill" onclick="showSignOutMenu()" id="user-pill" title="Sign out">
+        <div class="user-pill-avatar" id="user-avatar">?</div>
+        <div class="user-pill-name" id="user-name">…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYNC BAR -->
+  <div class="sync-bar offline" id="sync-bar">
+    <div class="sync-dot"></div>
+    <span id="sync-label">Not connected</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="add"><span class="tab-icon">➕</span>Add</div>
+    <div class="tab" data-tab="history"><span class="tab-icon">📋</span>History</div>
+    <div class="tab" data-tab="summary"><span class="tab-icon">📊</span>Summary</div>
+    <div class="tab" data-tab="invoice"><span class="tab-icon">🧾</span>Invoice</div>
+    <div class="tab" data-tab="settings"><span class="tab-icon">⚙️</span>Settings</div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div class="scroll-area">
+
+    <!-- ══════════════════════════════════════
+         ADD PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel active" id="panel-add">
+
+      <div class="edit-banner" id="edit-banner">\u270f\ufe0f Editing entry \u2014 Save to update</div>
+
+      <div class="install-banner" id="install-banner">
+        <span style="font-size:22px">📲</span>
+        <div class="install-text"><strong>Add to Home Screen</strong>Use like a real app</div>
+        <button class="btn btn-primary btn-sm" id="install-btn">Install</button>
+      </div>
+
+      <!-- TYPE TOGGLE -->
+      <div class="type-toggle">
+        <div class="type-btn active" id="type-mileage" onclick="setType('mileage')">
+          <span class="type-btn-icon">🚗</span>Mileage
+        </div>
+        <div class="type-btn" id="type-expense" onclick="setType('expense')">
+          <span class="type-btn-icon">💳</span>Expense
+        </div>
+        <div class="type-btn" id="type-time" onclick="setType('time')">
+          <span class="type-btn-icon">🕐</span>Time
+        </div>
+      </div>
+
+      <!-- ── MILEAGE FORM ── -->
+      <div id="mileage-form">
+
+        <!-- Date + Purpose (side by side) -->
+        <div class="card">
+          <div class="card-title">Trip Details</div>
+          <div class="row">
+            <div class="field">
+              <label>Date</label>
+              <input type="date" id="mile-date" />
+            </div>
+            <div class="field">
+              <label>Purpose</label>
+              <select id="mile-purpose">
+                <option value="">— Select —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stop builder -->
+        <div class="card">
+          <div class="card-title">Build Your Route</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">Tap stops in order to build your trip. Tap a stop in the route to remove it.</p>
+          <!-- Route ribbon -->
+          <div class="stop-ribbon" id="stop-ribbon">
+            <span class="stop-empty">No stops yet — tap below to start</span>
+          </div>
+          <!-- Destination buttons -->
+          <div class="dest-grid" id="dest-grid">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Distance result -->
+        <div class="distance-bar" id="distance-bar">
+          <div class="dist-left">
+            <div class="dist-label">Distance</div>
+            <div class="dist-value dim" id="dist-value">— km</div>
+            <div class="dist-status" id="dist-status">Add stops to calculate</div>
+          </div>
+          <div class="dist-right">
+            <div class="reimb-label">Reimbursement</div>
+            <div class="reimb-value dim" id="reimb-value">$—</div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card">
+          <div class="card-title">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></div>
+          <textarea id="mile-notes" placeholder="Any extra details…"></textarea>
+        </div>
+
+        <button class="btn btn-success" onclick="saveMileage()">✓ Save Trip</button>
+      </div>
+
+      <!-- ── EXPENSE FORM ── -->
+      <div id="expense-form" style="display:none">
+        <div class="card">
+          <div class="card-title">Expense Details</div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="exp-date" />
+          </div>
+          <div class="field">
+            <label>Amount ($)</label>
+            <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <input type="text" id="exp-description" placeholder="e.g. Lunch with client" />
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <div class="cat-grid" id="cat-grid">
+              <div class="cat-pill selected" data-cat="Meals" onclick="selectCat(this)"><div class="cat-pill-icon">🍽️</div><div class="cat-pill-label">Meals</div></div>
+              <div class="cat-pill" data-cat="Parking" onclick="selectCat(this)"><div class="cat-pill-icon">🅿️</div><div class="cat-pill-label">Parking</div></div>
+              <div class="cat-pill" data-cat="Fuel" onclick="selectCat(this)"><div class="cat-pill-icon">⛽</div><div class="cat-pill-label">Fuel</div></div>
+              <div class="cat-pill" data-cat="Hotel" onclick="selectCat(this)"><div class="cat-pill-icon">🏨</div><div class="cat-pill-label">Hotel</div></div>
+              <div class="cat-pill" data-cat="Supplies" onclick="selectCat(this)"><div class="cat-pill-icon">📦</div><div class="cat-pill-label">Supplies</div></div>
+              <div class="cat-pill" data-cat="Other" onclick="selectCat(this)"><div class="cat-pill-icon">📎</div><div class="cat-pill-label">Other</div></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Notes (optional)</label>
+            <textarea id="exp-notes" placeholder="Any extra details…"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Receipt Photo</div>
+          <div class="receipt-drop">
+            <input type="file" id="receipt-input" accept="image/*" capture="environment" multiple onchange="handleReceipts(event)" />
+            <div class="receipt-icon">📷</div>
+            <div class="receipt-text">Tap to take photo or upload</div>
+            <div class="receipt-sub">Stored on this device</div>
+          </div>
+          <div class="receipt-preview" id="receipt-preview"></div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveExpense()">✓ Save Expense</button>
+      </div>
+
+
+      <!-- ── TIME FORM ── -->
+      <div id="time-form" style="display:none">
+
+        <div class="card">
+          <div class="card-title">Billing Period</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Select the start and end dates this timesheet covers. Hours are not tied to specific days.</p>
+          <div class="row">
+            <div class="field">
+              <label>Period Start</label>
+              <input type="date" id="time-period-start" />
+            </div>
+            <div class="field">
+              <label>Period End</label>
+              <input type="date" id="time-period-end" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Log Hours</div>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Add hours for each type of work in this period.</p>
+          <div id="time-type-rows"><!-- populated by JS --></div>
+          <div style="margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:13px;font-weight:700;color:var(--text2)">Total Hours</span>
+              <span style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent2)" id="time-total-hours">0.00 hrs</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+              <span style="font-size:13px;font-weight:700;color:var(--text2)">Total Earnings</span>
+              <span style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)" id="time-total-earnings">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(optional)</span></div>
+          <textarea id="time-notes" placeholder="Any notes for this timesheet period…"></textarea>
+        </div>
+
+        <button class="btn btn-success" onclick="saveTimeEntry()">✓ Save Timesheet</button>
+      </div>
+
+    </div><!-- /panel-add -->
+
+    <!-- ══════════════════════════════════════
+         HISTORY PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-history">
+      <div class="filter-bar">
+        <div class="filter-chip active" onclick="setFilter(this,'all')">All</div>
+        <div class="filter-chip" onclick="setFilter(this,'mileage')">🚗 Mileage</div>
+        <div class="filter-chip" onclick="setFilter(this,'expense')">💳 Expenses</div>
+        <div class="filter-chip" onclick="setFilter(this,'time')">🕐 Time</div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SUMMARY PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-summary">
+      <div class="period-row">
+        <div class="period-btn active" onclick="setPeriod(this,'month')">Month</div>
+        <div class="period-btn" onclick="setPeriod(this,'quarter')">Quarter</div>
+        <div class="period-btn" onclick="setPeriod(this,'year')">Year</div>
+        <div class="period-btn" onclick="setPeriod(this,'all')">All</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">Total km</div><div class="stat-value blue" id="sum-miles">0</div></div>
+        <div class="stat-box"><div class="stat-label">km Reimb.</div><div class="stat-value green" id="sum-mile-reimb">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Expenses</div><div class="stat-value amber" id="sum-expense">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total Hours</div><div class="stat-value blue" id="sum-hours">0</div></div>
+        <div class="stat-box"><div class="stat-label">Time Earnings</div><div class="stat-value green" id="sum-earnings">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total Claim</div><div class="stat-value green" id="sum-total">$0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">By Category</div>
+        <div id="cat-breakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Export &amp; Email</div>
+        <div class="field">
+          <label>Your email address</label>
+          <input type="email" id="export-email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label>Period label</label>
+          <input type="text" id="export-label" />
+        </div>
+        <div class="field">
+          <div class="card-title" style="margin-bottom:8px">Preview</div>
+          <div class="export-preview" id="export-preview"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:6px">
+          <button class="btn btn-ghost" style="flex:1" onclick="copyReport()">📋 Copy</button>
+          <button class="btn btn-primary" style="flex:1" onclick="emailReport()">✉️ Send</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">
+          On mobile: opens share sheet. On desktop: copies report to clipboard — then paste into your email app.
+        </div>
+        <button class="btn btn-ghost" onclick="downloadCSV()">⬇️ Download CSV</button>
+      </div>
+
+      <div class="card" style="border-color:var(--red-dim)">
+        <div class="card-title" style="color:var(--red)">Danger Zone</div>
+        <button class="btn btn-danger" onclick="confirmClear()">🗑️ Clear All Data</button>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════
+         INVOICE PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-invoice">
+
+      <div class="period-row" id="inv-period-row">
+        <div class="period-btn active" onclick="setInvPeriod(this,'month')">Month</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'quarter')">Quarter</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'year')">Year</div>
+        <div class="period-btn" onclick="setInvPeriod(this,'all')">All</div>
+      </div>
+
+      <!-- Invoice totals preview -->
+      <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px">
+        <div class="stat-box"><div class="stat-label">Hours</div><div class="stat-value blue" id="inv-hours">0</div></div>
+        <div class="stat-box"><div class="stat-label">Expenses</div><div class="stat-value amber" id="inv-expenses">$0</div></div>
+        <div class="stat-box"><div class="stat-label">Total</div><div class="stat-value green" id="inv-total">$0</div></div>
+      </div>
+
+      <!-- Invoice settings -->
+      <div class="card">
+        <div class="card-title">Invoice Details</div>
+        <div class="row">
+          <div class="field">
+            <label>Invoice Number</label>
+            <input type="text" id="inv-number" placeholder="INV-001" />
+          </div>
+          <div class="field">
+            <label>Invoice Date</label>
+            <input type="date" id="inv-date" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Period Description</label>
+          <input type="text" id="inv-period-label" placeholder="e.g. March 2025" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Include in Invoice</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="inv-toggle-row" id="toggle-time" onclick="toggleInvInclude('time')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>🕐 Time entries &amp; earnings</span>
+          </div>
+          <div class="inv-toggle-row" id="toggle-mileage" onclick="toggleInvInclude('mileage')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>🚗 Mileage reimbursement</span>
+          </div>
+          <div class="inv-toggle-row" id="toggle-expenses" onclick="toggleInvInclude('expenses')" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>💳 Expenses</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <button class="btn btn-ghost" onclick="previewInvoice()">👁 Preview</button>
+        <button class="btn btn-primary" onclick="generateInvoice()">📄 Generate PDF</button>
+      </div>
+      <button class="btn btn-ghost" style="margin-bottom:12px" onclick="emailInvoice()">✉️ Send Invoice</button>
+
+    </div><!-- /panel-invoice -->
+
+    <!-- ══════════════════════════════════════
+         SETTINGS PANEL
+    ══════════════════════════════════════ -->
+    <div class="panel" id="panel-settings">
+
+      <!-- Settings home menu -->
+      <div id="settings-home">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="list-item" onclick="showSettingsSub('your-details')" style="cursor:pointer">
+            <div class="list-item-icon">👤</div>
+            <div class="list-item-name">Your Details</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+          <div class="list-item" onclick="showSettingsSub('destinations')" style="cursor:pointer">
+            <div class="list-item-icon">📍</div>
+            <div class="list-item-name">Destinations</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+          <div class="list-item" onclick="showSettingsSub('purposes')" style="cursor:pointer">
+            <div class="list-item-icon">🗂️</div>
+            <div class="list-item-name">Purposes</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+          <div class="list-item" onclick="showSettingsSub('clients')" style="cursor:pointer">
+            <div class="list-item-icon">🏢</div>
+            <div class="list-item-name">Clients</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+          <div class="list-item" onclick="showSettingsSub('invoice-defaults')" style="cursor:pointer">
+            <div class="list-item-icon">🧾</div>
+            <div class="list-item-name">Invoice Defaults</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+          <div class="list-item" onclick="showSettingsSub('advanced')" style="cursor:pointer;border-bottom:none">
+            <div class="list-item-icon">⚙️</div>
+            <div class="list-item-name">Advanced</div>
+            <div style="color:var(--text3);font-size:16px">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Your Details -->
+      <div id="settings-sub-your-details" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Your Details</div>
+        <div class="card">
+          <div class="field"><label>Your Name / Business Name</label><input type="text" id="setting-biz-name" placeholder="Jane Smith" /></div>
+          <div class="field"><label>Address Line 1</label><input type="text" id="setting-biz-addr1" placeholder="123 Main St" /></div>
+          <div class="field"><label>Address Line 2</label><input type="text" id="setting-biz-addr2" placeholder="Auckland 1010" /></div>
+          <div class="field"><label>Phone</label><input type="text" id="setting-biz-phone" placeholder="+64 21 123 4567" /></div>
+          <div class="field"><label>Email</label><input type="email" id="setting-biz-email" placeholder="jane@example.com" /></div>
+          <div class="field"><label>Bank Account</label><input type="text" id="setting-biz-bank" placeholder="12-3456-7890123-00" oninput="formatBankAccount(this)" /></div>
+          <button class="btn btn-ghost" onclick="saveBusinessDetails()" style="margin-top:4px">Save Details</button>
+        </div>
+        <div class="settings-section-title" style="margin-top:16px">Time Types &amp; Rates</div>
+        <div class="list-editor" id="time-types-list"></div>
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">Add Time Type</div>
+          <div class="field"><label>Name</label><input type="text" id="new-timetype-name" placeholder="e.g. Senior Tutor" /></div>
+          <div class="field"><label>Hourly Rate ($)</label><input type="number" id="new-timetype-rate" placeholder="0.00" min="0" step="0.01" /></div>
+          <button class="btn btn-primary" onclick="addTimeType()" style="margin-top:4px">Add Time Type</button>
+        </div>
+        <div class="settings-section-title" style="margin-top:16px">Mileage Rate</div>
+        <div class="card">
+          <div class="field">
+            <label>Rate per km ($) — NZ IRD rate</label>
+            <input type="number" id="setting-rate" step="0.001" min="0" placeholder="0.000" />
+          </div>
+          <button class="btn btn-ghost" onclick="saveRate()" style="margin-top:8px">Save Rate</button>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Destinations -->
+      <div id="settings-sub-destinations" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Destinations</div>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;padding-left:2px">Each destination needs a full address for Google Maps distance calculation.</p>
+        <div class="list-editor" id="destinations-list"></div>
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">Add Destination</div>
+          <div class="field"><label>Name</label><input type="text" id="new-dest-name" placeholder="e.g. Home" /></div>
+          <div class="field"><label>Emoji Icon</label><input type="text" id="new-dest-icon" placeholder="🏠" maxlength="4" style="width:80px" /></div>
+          <div class="field">
+            <label>Address</label>
+            <div class="autocomplete-wrap" id="new-dest-wrap">
+              <input type="text" id="new-dest-address" placeholder="Start typing an address…" autocomplete="off" oninput="onAddressInput(this,'new-dest-suggestions')" onblur="delayHide('new-dest-suggestions')" />
+              <div class="autocomplete-list" id="new-dest-suggestions"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addDestination()" style="margin-top:4px">Add Destination</button>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Purposes -->
+      <div id="settings-sub-purposes" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Trip Purposes</div>
+        <div class="list-editor" id="purposes-list"></div>
+        <div class="add-row" style="margin-top:8px">
+          <input type="text" id="new-purpose-input" placeholder="Add new purpose…" />
+          <button class="btn btn-primary btn-sm" onclick="addPurpose()">Add</button>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Clients -->
+      <div id="settings-sub-clients" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Clients</div>
+        <div class="list-editor" id="clients-list"></div>
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">Add / Edit Client</div>
+          <input type="hidden" id="edit-client-id" />
+          <div class="field"><label>Client Name / Organisation</label><input type="text" id="setting-client-name" placeholder="ABC Company Ltd" /></div>
+          <div class="field"><label>Address Line 1</label><input type="text" id="setting-client-addr1" placeholder="456 Business Ave" /></div>
+          <div class="field"><label>Address Line 2</label><input type="text" id="setting-client-addr2" placeholder="Wellington 6011" /></div>
+          <div class="field"><label>Phone</label><input type="text" id="setting-client-phone" placeholder="+64 4 123 4567" /></div>
+          <div class="field"><label>Client Email</label><input type="email" id="setting-client-email" placeholder="accounts@client.com" /></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-primary" style="flex:1" onclick="saveClientEntry()">Save Client</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearClientForm()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Invoice Defaults -->
+      <div id="settings-sub-invoice-defaults" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Invoice Defaults</div>
+        <div class="card">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">Choose which line items are included by default when creating an invoice.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="inv-toggle-row" id="inv-default-time" onclick="toggleInvDefault('incTime')" data-on="true">
+              <div class="inv-toggle-dot"></div>
+              <span>🕐 Time entries &amp; earnings</span>
+            </div>
+            <div class="inv-toggle-row" id="inv-default-mileage" onclick="toggleInvDefault('incMileage')" data-on="false">
+              <div class="inv-toggle-dot"></div>
+              <span>🚗 Mileage reimbursement</span>
+            </div>
+            <div class="inv-toggle-row" id="inv-default-expenses" onclick="toggleInvDefault('incExpenses')" data-on="false">
+              <div class="inv-toggle-dot"></div>
+              <span>💳 Expenses</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveInvoiceDefaults()" style="margin-top:14px">Save Defaults</button>
+        </div>
+      </div>
+
+      <!-- Sub-screen: Advanced -->
+      <div id="settings-sub-advanced" style="display:none">
+        <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
+        <div class="settings-section-title">Advanced</div>
+        <div id="api-key-notice" class="api-notice" style="display:none">
+          <strong>⚠️ API key required</strong>
+          Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — enable the <em>Distance Matrix API</em> and <em>Places API</em>. Paste it below.
+        </div>
+        <div class="card">
+          <div class="field">
+            <label>Google Maps API Key</label>
+            <input type="password" id="setting-apikey" placeholder="AIza…" autocomplete="off" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary" style="flex:1" onclick="saveApiKey()">Save Key</button>
+            <button class="btn btn-ghost btn-sm" onclick="testApiKey()">Test</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:8px;border-color:var(--red-dim)">
+          <div class="card-title" style="color:var(--red)">Danger Zone</div>
+          <button class="btn btn-danger" onclick="confirmClear()">🗑️ Delete All Data</button>
+        </div>
+      </div>
+
+    </div><!-- /panel-settings -->
+
+  </div><!-- /scroll-area -->
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ Clear all data?</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6">This permanently deletes all entries. Cannot be undone.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="clearAllData()">Delete all</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ADDRESS MODAL -->
+<div class="modal-overlay" id="edit-addr-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="edit-addr-title">Edit Address</div>
+    <div class="field">
+      <label>Address</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="edit-addr-input" placeholder="Start typing an address…" autocomplete="off"
+          oninput="onAddressInput(this,'edit-addr-suggestions')"
+          onblur="delayHide('edit-addr-suggestions')" />
+        <div class="autocomplete-list" id="edit-addr-suggestions"></div>
+      </div>
+      <div id="edit-addr-verified" style="margin-top:6px"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('edit-addr-modal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditedAddress()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ═══════════════════════════════════════════════════════════
+const WORKER_URL = 'https://myte-log-api.mason-kevinc.workers.dev';
+
+// ═══════════════════════════════════════════════════════════
+//  DEFAULT CONFIG
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_CONFIG = {
+  apiKey: '',
+  ratePerKm: 1.17,
+  purposes: [
+    'Client visit','Office commute','Airport transfer',
+    'Site inspection','Training / conference','Other business'
+  ],
+  destinations: [
+    { id: 'd1', name: 'Home',    icon: '🏠', address: '' },
+    { id: 'd2', name: 'Office',  icon: '🏢', address: '' },
+    { id: 'd3', name: 'Airport', icon: '✈️', address: '' },
+    { id: 'd4', name: 'Client',  icon: '🤝', address: '' }
+  ],
+  timeTypes: [
+    { id: 't1', name: 'Senior Tutor',      rate: 0 },
+    { id: 't2', name: 'Scholarship Lesson', rate: 0 },
+    { id: 't3', name: 'Admin',              rate: 0 },
+    { id: 't4', name: 'Travel',             rate: 0 }
+  ],
+  bizDetails: { name:'', address:'', email:'', phone:'', bank:'' },
+  clientDetails: { name:'', address:'', email:'' },
+  lastInvoiceNumber: 0
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let config   = loadConfig();
+let entries  = JSON.parse(localStorage.getItem('et_entries')  || '[]');
+let receipts = JSON.parse(localStorage.getItem('et_receipts') || '{}');
+// Auth
+let authToken  = localStorage.getItem('te_token') || null;
+let authUser   = JSON.parse(localStorage.getItem('te_user') || 'null');
+let syncTimer  = null;
+let pendingSync = false;
+
+let currentType    = 'mileage';
+let currentFilter  = 'all';
+let currentPeriod  = 'month';
+let currentInvPeriod = 'month';
+let selectedCat    = 'Meals';
+let pendingReceipts = [];
+let tripStops      = [];
+let currentDistKm  = 0;
+let distanceTimer  = null;
+let deferredPrompt = null;
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIG HELPERS
+// ═══════════════════════════════════════════════════════════
+function loadConfig() {
+  // Config now loaded via syncFromCloud() / loadLocal()
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+}
+function saveConfig() {
+  save(); // save() handles both local + cloud
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if already logged in
+  if (authToken && authUser) {
+    initApp();
+  } else {
+    showAuthScreen();
+  }
+
+  // Allow Enter key on login form
+  document.getElementById('auth-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('auth-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('auth-password').focus();
+  });
+});
+
+async function initApp() {
+  // Hide auth screen, show app
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').style.display = 'flex';
+
+  // Update user pill
+  if (authUser) {
+    document.getElementById('user-avatar').textContent = (authUser.name || authUser.email)[0].toUpperCase();
+    document.getElementById('user-name').textContent   = authUser.name || authUser.email.split('@')[0];
+  }
+
+  // Load data — cloud first, local cache fallback
+  await syncFromCloud();
+
+  // Header date
+  document.getElementById('header-date').textContent =
+    new Date().toLocaleDateString('en-NZ', { weekday:'long', month:'long', day:'numeric' });
+
+  setTodayDates();
+  populatePurposeSelect();
+  renderDestGrid();
+  updateHeaderTotal();
+  renderHistory();
+  updateSummary();
+  setExportPreview();
+  renderSettingsPage();
+
+  document.getElementById('export-label').value =
+    new Date().toLocaleDateString('en-NZ', { month:'long', year:'numeric' });
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+      if (t.dataset.tab === 'summary')  { updateSummary(); setExportPreview(); }
+      if (t.dataset.tab === 'history')  { renderHistory(); }
+      if (t.dataset.tab === 'settings') { renderSettingsPage(); }
+      if (t.dataset.tab === 'invoice')  { updateInvoicePanel(); }
+    });
+  });
+
+  document.getElementById('export-email').addEventListener('input', setExportPreview);
+  document.getElementById('export-label').addEventListener('input', setExportPreview);
+
+  checkApiKeyNotice();
+  if (config.apiKey) loadMapsSDK(config.apiKey);
+  setTimePeriodDefaults();
+  renderTimeTypeRows();
+
+  // Sync from cloud when coming back online
+  window.addEventListener('online',  () => syncFromCloud().then(() => { renderHistory(); updateSummary(); }));
+  window.addEventListener('offline', () => setSyncStatus('offline', 'Offline — changes saved locally'));
+}
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').style.display = 'none';
+}
+
+// ── API FETCH HELPER ──
+async function apiFetch(path, method = 'GET', body = null, rawBody = false) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {})
+    }
+  };
+  if (body !== null) opts.body = rawBody ? body : JSON.stringify(body);
+  const res = await fetch(WORKER_URL + path, opts);
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(e.error || res.statusText);
+  }
+  return res.json();
+}
+
+// ── LOGIN / LOGOUT ──
+async function doLogin() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-error');
+  const btn      = document.getElementById('login-btn');
+
+  errEl.classList.remove('show');
+  if (!email || !password) { errEl.textContent = 'Please enter email and password'; errEl.classList.add('show'); return; }
+
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  try {
+    const data = await apiFetch('/api/login', 'POST', { email, password });
+    authToken = data.token;
+    authUser  = { userId: data.userId, email: data.email, name: data.name };
+    localStorage.setItem('te_token', authToken);
+    localStorage.setItem('te_user',  JSON.stringify(authUser));
+    await initApp();
+  } catch (e) {
+    errEl.textContent = e.message || 'Login failed';
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+function showSignOutMenu() {
+  if (confirm('Sign out of Time & Expense Log?')) doSignOut();
+}
+
+async function doSignOut() {
+  try { await apiFetch('/api/logout', 'POST'); } catch {}
+  authToken = null; authUser = null;
+  localStorage.removeItem('te_token');
+  localStorage.removeItem('te_user');
+  showAuthScreen();
+}
+
+// PWA
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('visible');
+});
+document.getElementById('install-btn')?.addEventListener('click', () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    document.getElementById('install-banner').classList.remove('visible');
+    deferredPrompt = null;
+  });
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+// ── LOCAL CACHE SAVE (immediate) ──
+function saveLocal() {
+  if (!authUser) return;
+  const ns = 'te_' + authUser.userId + '_';
+  localStorage.setItem(ns + 'entries',  JSON.stringify(entries));
+  localStorage.setItem(ns + 'receipts', JSON.stringify(receipts));
+  localStorage.setItem(ns + 'config',   JSON.stringify(config));
+}
+
+// ── LOAD FROM LOCAL CACHE ──
+function loadLocal() {
+  if (!authUser) return;
+  const ns = 'te_' + authUser.userId + '_';
+  entries  = JSON.parse(localStorage.getItem(ns + 'entries')  || '[]');
+  receipts = JSON.parse(localStorage.getItem(ns + 'receipts') || '{}');
+  const savedCfg = JSON.parse(localStorage.getItem(ns + 'config') || 'null');
+  if (savedCfg) config = Object.assign({}, DEFAULT_CONFIG, savedCfg);
+  migrateConfig();
+}
+
+// ── CLOUD SYNC ──
+async function syncToCloud(keys = ['entries','receipts','config']) {
+  if (!authToken || !navigator.onLine) return;
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    const payloads = {
+      entries:  JSON.stringify(entries),
+      receipts: JSON.stringify(receipts),
+      config:   JSON.stringify(config)
+    };
+    await Promise.all(keys.map(k =>
+      apiFetch(`/api/data/${k}`, 'PUT', payloads[k], true)
+    ));
+    setSyncStatus('synced', 'Saved to cloud');
+    setTimeout(() => setSyncStatus('synced', 'All changes saved'), 1500);
+  } catch (e) {
+    setSyncStatus('error', 'Sync failed — saved locally');
+  }
+}
+
+async function syncFromCloud() {
+  if (!authToken) return;
+  setSyncStatus('syncing', 'Loading…');
+  try {
+    const [ent, rec, cfg] = await Promise.all([
+      apiFetch('/api/data/entries'),
+      apiFetch('/api/data/receipts'),
+      apiFetch('/api/data/config')
+    ]);
+    entries  = ent;
+    receipts = rec;
+    config   = Object.assign({}, DEFAULT_CONFIG, cfg);
+    migrateConfig();
+    saveLocal();
+    setSyncStatus('synced', 'All changes saved');
+    return true;
+  } catch (e) {
+    // Fall back to local cache
+    loadLocal();
+    setSyncStatus('offline', 'Offline — using cached data');
+    return false;
+  }
+}
+
+// ── MAIN save() — write local immediately, debounce cloud sync ──
+function save() {
+  saveLocal();
+  updateHeaderTotal();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncToCloud(), 1500);
+}
+
+function setSyncStatus(state, label) {
+  const bar = document.getElementById('sync-bar');
+  const lbl = document.getElementById('sync-label');
+  if (!bar || !lbl) return;
+  bar.className = 'sync-bar ' + state;
+  lbl.textContent = label;
+}
+function setTodayDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mile-date').value = today;
+  document.getElementById('exp-date').value  = today;
+}
+function fmt(n)      { return '$' + parseFloat(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function fmtKm(n)    { return parseFloat(n||0).toFixed(1) + ' km'; }
+function uid()       { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function showToast(msg, emoji='✓') {
+  const t = document.getElementById('toast');
+  t.textContent = emoji + ' ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function updateHeaderTotal() {
+  let total = 0;
+  entries.forEach(e => {
+    if (e.type === 'mileage') total += (e.km || 0) * config.ratePerKm;
+    else if (e.type === 'expense') total += (e.amount || 0);
+    else if (e.type === 'time') total += calcTimeEarnings(e);
+  });
+  document.getElementById('header-total').textContent = fmt(total);
+}
+function calcTimeEarnings(e) {
+  if (!e.hours) return 0;
+  return Object.entries(e.hours).reduce((sum, [typeId, hrs]) => {
+    const tt = config.timeTypes.find(t => t.id === typeId);
+    return sum + (hrs || 0) * (tt ? tt.rate : 0);
+  }, 0);
+}
+function calcTimeTotalHours(e) {
+  if (!e.hours) return 0;
+  return Object.values(e.hours).reduce((s, h) => s + (h || 0), 0);
+}
+function checkApiKeyNotice() {
+  const notice = document.getElementById('api-key-notice');
+  if (notice) notice.style.display = config.apiKey ? 'none' : 'block';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TYPE TOGGLE
+// ═══════════════════════════════════════════════════════════
+function setType(t) {
+  currentType = t;
+  document.getElementById('mileage-form').style.display = t==='mileage' ? 'block' : 'none';
+  document.getElementById('expense-form').style.display = t==='expense'  ? 'block' : 'none';
+  document.getElementById('time-form').style.display    = t==='time'     ? 'block' : 'none';
+  document.getElementById('type-mileage').className = 'type-btn' + (t==='mileage' ? ' active' : '');
+  document.getElementById('type-expense').className  = 'type-btn' + (t==='expense'  ? ' active' : '');
+  document.getElementById('type-time').className     = 'type-btn' + (t==='time'     ? ' active' : '');
+  if (t === 'time') renderTimeTypeRows();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  POPULATE PURPOSE SELECT
+// ═══════════════════════════════════════════════════════════
+function populatePurposeSelect() {
+  const sel = document.getElementById('mile-purpose');
+  const purposes = (config.purposes || []).map(p =>
+    typeof p === 'string' ? { text: p, usageCount: 0 } : p
+  );
+  const sorted = [...purposes].sort((a, b) => {
+    if ((b.usageCount || 0) !== (a.usageCount || 0)) return (b.usageCount || 0) - (a.usageCount || 0);
+    return a.text.localeCompare(b.text);
+  });
+  sel.innerHTML = '<option value="">— Select purpose —</option>' +
+    sorted.map(p => `<option value="${p.text}">${p.text}</option>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DESTINATION GRID
+// ═══════════════════════════════════════════════════════════
+function renderDestGrid() {
+  const grid = document.getElementById('dest-grid');
+  const dests = config.destinations || [];
+  const home = dests.find(d => d.name.toLowerCase() === 'home' || d.icon === '\U0001f3e0');
+  const others = dests.filter(d => d !== home);
+
+  // Group others by region, sorted alpha within region
+  const regionMap = {};
+  others.forEach(d => {
+    const r = d.region || 'Other';
+    if (!regionMap[r]) regionMap[r] = [];
+    regionMap[r].push(d);
+  });
+  Object.values(regionMap).forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name)));
+  const regions = Object.keys(regionMap).sort();
+
+  let html = '';
+  if (home) {
+    html += `<button class="dest-btn" style="grid-column:1/-1;text-align:left;display:flex;align-items:center;gap:8px" onclick="addStop('${home.id}')">
+      <span class="dest-icon" style="margin-bottom:0">${home.icon}</span>
+      <span>${home.name}</span>
+    </button>`;
+  }
+  regions.forEach(region => {
+    if (regionMap[region].length > 0) {
+      html += `<div style="grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);padding:6px 2px 2px">${region}</div>`;
+      regionMap[region].forEach(d => {
+        html += `<button class="dest-btn" onclick="addStop('${d.id}')">
+          <span class="dest-icon">${d.icon}</span>
+          ${d.name}
+        </button>`;
+      });
+    }
+  });
+  grid.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRIP STOP BUILDER
+// ═══════════════════════════════════════════════════════════
+function addStop(destId) {
+  tripStops.push(destId);
+  renderRibbon();
+  scheduleDistanceCalc();
+}
+
+function removeStop(idx) {
+  tripStops.splice(idx, 1);
+  renderRibbon();
+  scheduleDistanceCalc();
+}
+
+function renderRibbon() {
+  const ribbon = document.getElementById('stop-ribbon');
+  if (tripStops.length === 0) {
+    ribbon.innerHTML = '<span class="stop-empty">No stops yet — tap below to start</span>';
+    return;
+  }
+  ribbon.innerHTML = tripStops.map((id, i) => {
+    const dest = config.destinations.find(d => d.id === id);
+    const name = dest ? dest.name : '?';
+    const icon = dest ? dest.icon : '📍';
+    const arrow = i < tripStops.length - 1 ? '<span class="stop-arrow">›</span>' : '';
+    return `<div class="stop-chip">
+      <div class="stop-chip-label" onclick="removeStop(${i})" title="Tap to remove">
+        ${icon} ${name}<span class="remove-x">✕</span>
+      </div>
+      ${arrow}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DISTANCE CALCULATION — Maps JS SDK (no CORS issues)
+// ═══════════════════════════════════════════════════════════
+function scheduleDistanceCalc() {
+  clearTimeout(distanceTimer);
+  if (tripStops.length < 2) { resetDistanceBar(); return; }
+  setDistanceBar('calculating', '…', 'Calculating route…');
+  distanceTimer = setTimeout(calcDistance, 600);
+}
+
+function resetDistanceBar() {
+  currentDistKm = 0;
+  setDistanceBar('idle', '— km', 'Add stops to calculate', '$—', true);
+}
+
+function setDistanceBar(state, distText, statusText, reimbText, dim) {
+  const bar = document.getElementById('distance-bar');
+  const dv  = document.getElementById('dist-value');
+  const rv  = document.getElementById('reimb-value');
+  const st  = document.getElementById('dist-status');
+  bar.className = 'distance-bar' + (state==='calculating' ? ' calculating' : state==='ready' ? ' ready' : state==='error' ? ' error' : '');
+  dv.textContent = distText;
+  dv.className   = 'dist-value' + (dim ? ' dim' : '');
+  if (reimbText !== undefined) {
+    rv.textContent = reimbText || fmt(currentDistKm * config.ratePerKm);
+    rv.className   = 'reimb-value' + (dim ? ' dim' : '');
+  }
+  st.textContent = statusText || '';
+}
+
+function calcDistance() {
+  if (!config.apiKey) {
+    setDistanceBar('error', '— km', '⚠️ No API key — add one in Settings', '$—', true);
+    return;
+  }
+  if (!window.google?.maps) {
+    setDistanceBar('error', '— km', '⚠️ Maps not loaded yet — try again', '$—', true);
+    return;
+  }
+
+  const dests = tripStops.map(id => config.destinations.find(d => d.id === id));
+  const missing = dests.find(d => !d?.address?.trim());
+  if (missing) {
+    setDistanceBar('error', '— km', `⚠️ "${missing?.name}" has no address — add in Settings`, '$—', true);
+    return;
+  }
+
+  // Chain legs sequentially using the SDK's DistanceMatrixService
+  const service = new google.maps.DistanceMatrixService();
+  let totalKm = 0; // each leg rounded up to next whole km
+  let legIdx = 0;
+
+  function nextLeg() {
+    if (legIdx >= dests.length - 1) {
+      currentDistKm = totalKm;
+      const reimb = currentDistKm * config.ratePerKm;
+      setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
+      return;
+    }
+    service.getDistanceMatrix({
+      origins: [dests[legIdx].address],
+      destinations: [dests[legIdx + 1].address],
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC
+    }, (res, status) => {
+      if (status !== 'OK') {
+        setDistanceBar('error', '— km', `⚠️ API error: ${status}`, '$—', true);
+        currentDistKm = 0; return;
+      }
+      const el = res.rows[0]?.elements[0];
+      if (el?.status !== 'OK') {
+        setDistanceBar('error', '— km', `⚠️ No route found`, '$—', true);
+        currentDistKm = 0; return;
+      }
+      totalKm += Math.ceil(el.distance.value / 1000); // round up per leg
+      legIdx++;
+      nextLeg();
+    });
+  }
+  nextLeg();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE MILEAGE
+// ═══════════════════════════════════════════════════════════
+function saveMileage() {
+  const date    = document.getElementById('mile-date').value;
+  const purpose = document.getElementById('mile-purpose').value;
+  if (!date)    { showToast('Please select a date', '⚠️'); return; }
+  if (!purpose) { showToast('Please select a purpose', '⚠️'); return; }
+  if (tripStops.length < 2) { showToast('Add at least 2 stops', '⚠️'); return; }
+  if (currentDistKm <= 0)   { showToast('Waiting for distance calculation…', '⏳'); return; }
+
+  const stopNames = tripStops
+    .map(id => config.destinations.find(d => d.id === id)?.name || '?')
+    .join(' → ');
+
+  const entry = {
+    id: uid(), type: 'mileage', date, purpose,
+    stopIds: [...tripStops], route: stopNames,
+    km: currentDistKm,
+    reimbursement: currentDistKm * config.ratePerKm,
+    rateUsed: config.ratePerKm,
+    notes: document.getElementById('mile-notes').value.trim(),
+    createdAt: Date.now()
+  };
+  entries.unshift(entry);
+  save();
+  showToast(`${fmtKm(currentDistKm)} trip saved!`, '🚗');
+
+  // Increment purpose usage count
+  migrateAndIncrementPurpose(purpose);
+
+  // Reset
+  tripStops = []; currentDistKm = 0;
+  renderRibbon(); resetDistanceBar();
+  document.getElementById('mile-purpose').value = '';
+  document.getElementById('mile-notes').value = '';
+}
+
+function migrateAndIncrementPurpose(text) {
+  // Migrate string purposes to objects if needed
+  config.purposes = (config.purposes || []).map(p =>
+    typeof p === 'string' ? { text: p, usageCount: 0 } : p
+  );
+  const found = config.purposes.find(p => p.text === text);
+  if (found) {
+    found.usageCount = (found.usageCount || 0) + 1;
+  }
+  saveConfig();
+  populatePurposeSelect();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPENSE
+// ═══════════════════════════════════════════════════════════
+function selectCat(el) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCat = el.dataset.cat;
+}
+function handleReceipts(e) {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingReceipts.push({ id: uid(), dataUrl: ev.target.result });
+      renderReceiptPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderReceiptPreviews() {
+  document.getElementById('receipt-preview').innerHTML = pendingReceipts.map(r => `
+    <div class="receipt-thumb-wrap">
+      <img class="receipt-thumb" src="${r.dataUrl}" alt="Receipt" />
+      <button class="receipt-remove" onclick="removeReceipt('${r.id}')">✕</button>
+    </div>`).join('');
+}
+function removeReceipt(id) {
+  pendingReceipts = pendingReceipts.filter(r => r.id !== id);
+  renderReceiptPreviews();
+}
+function saveExpense() {
+  const date   = document.getElementById('exp-date').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value);
+  const desc   = document.getElementById('exp-description').value.trim();
+  if (!date)          { showToast('Please enter a date', '⚠️'); return; }
+  if (!amount || amount <= 0) { showToast('Please enter an amount', '⚠️'); return; }
+  if (!desc)          { showToast('Please enter a description', '⚠️'); return; }
+
+  const id = uid();
+  const entry = {
+    id, type: 'expense', date, amount, description: desc,
+    category: selectedCat,
+    notes: document.getElementById('exp-notes').value.trim(),
+    receiptIds: pendingReceipts.map(r => r.id),
+    createdAt: Date.now()
+  };
+  pendingReceipts.forEach(r => { receipts[r.id] = r.dataUrl; });
+  entries.unshift(entry);
+  save();
+  showToast(`${fmt(amount)} expense saved!`, '💳');
+
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-description').value = '';
+  document.getElementById('exp-notes').value = '';
+  document.getElementById('receipt-input').value = '';
+  pendingReceipts = [];
+  renderReceiptPreviews();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════════════
+function setFilter(el, f) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = f;
+  renderHistory();
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const filtered = entries.filter(e => currentFilter==='all' || e.type===currentFilter);
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No entries yet</div><div class="empty-sub">Add your first entry above</div></div>`;
+    return;
+  }
+  const groups = {};
+  filtered.forEach(e => { (groups[e.date] = groups[e.date]||[]).push(e); });
+  list.innerHTML = Object.keys(groups).sort((a,b) => b.localeCompare(a)).map(date => `
+    <div><div class="date-label">${formatDateLabel(date)}</div>
+    <div class="entry-list">${groups[date].map(renderEntry).join('')}</div></div>
+  `).join('');
+}
+function formatDateLabel(ds) {
+  const d = new Date(ds+'T00:00:00'), today = new Date(); today.setHours(0,0,0,0);
+  const diff = (today - d)/86400000;
+  if (diff===0) return 'Today';
+  if (diff===1) return 'Yesterday';
+  return d.toLocaleDateString('en-NZ', { weekday:'long', month:'short', day:'numeric' });
+}
+function renderEntry(e) {
+  if (e.type === 'time') return renderTimeEntry(e);
+  if (e.type === 'mileage') {
+    return `<div class="entry mileage">
+      <div class="entry-icon">🚗</div>
+      <div class="entry-body">
+        <div class="entry-top">
+          <div class="entry-name">${e.purpose}</div>
+          <div class="entry-amount">${fmtKm(e.km)}</div>
+        </div>
+        <div class="entry-route">${e.route || ''}</div>
+        <div class="entry-meta">${fmt(e.reimbursement)} reimbursement · @${fmt(e.rateUsed||config.ratePerKm)}/km</div>
+        ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+        <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+      </div>
+    </div>`;
+  }
+  const catIcons = { Meals:'🍽️', Parking:'🅿️', Fuel:'⛽', Hotel:'🏨', Supplies:'📦', Other:'📎' };
+  const hasR = e.receiptIds?.length > 0;
+  return `<div class="entry expense">
+    <div class="entry-icon">${catIcons[e.category]||'💳'}</div>
+    <div class="entry-body">
+      <div class="entry-top">
+        <div class="entry-name">${e.description}</div>
+        <div class="entry-amount">${fmt(e.amount)}</div>
+      </div>
+      <div class="entry-meta">${e.category}</div>
+      ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+      ${hasR ? `<div class="entry-receipt-badge">📷 ${e.receiptIds.length} receipt${e.receiptIds.length>1?'s':''}</div>` : ''}
+      <div class="entry-actions">
+        ${hasR ? `<button class="del-btn" onclick="viewReceipts('${e.id}')">🔍 View</button>` : ''}
+        <button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderTimeEntry(e) {
+  const totalHrs = calcTimeTotalHours(e);
+  const totalEarnings = calcTimeEarnings(e);
+  const rows = Object.entries(e.hours || {}).map(([typeId, hrs]) => {
+    if (!hrs) return '';
+    const tt = config.timeTypes.find(t => t.id === typeId);
+    const name = tt ? tt.name : typeId;
+    const earn = hrs * (tt ? tt.rate : 0);
+    return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:3px">
+      <span>${name}</span><span style="font-family:var(--mono)">${hrs.toFixed(2)} hrs · ${fmt(earn)}</span>
+    </div>`;
+  }).join('');
+  const period = e.periodStart && e.periodEnd
+    ? `${formatDateLabel(e.periodStart)} – ${formatDateLabel(e.periodEnd)}`
+    : e.periodStart || '';
+  return `<div class="entry" style="border-left:3px solid var(--purple)">
+    <div class="entry-icon">🕐</div>
+    <div class="entry-body">
+      <div class="entry-top">
+        <div class="entry-name">${period}</div>
+        <div class="entry-amount" style="color:var(--purple)">${totalHrs.toFixed(2)} hrs</div>
+      </div>
+      ${rows}
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+        <span style="color:var(--text3);font-weight:600">Earnings</span>
+        <span style="font-family:var(--mono);color:var(--green);font-weight:700">${fmt(totalEarnings)}</span>
+      </div>
+      ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
+      <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+    </div>
+  </div>`;
+}
+
+function editEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  editingEntryId = id;
+  // Navigate to Add tab
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  document.querySelector('.tab[data-tab="add"]').classList.add('active');
+  document.getElementById('panel-add').classList.add('active');
+  document.getElementById('edit-banner').classList.add('show');
+
+  if (e.type === 'mileage') {
+    setType('mileage');
+    document.getElementById('mile-date').value    = e.date || '';
+    document.getElementById('mile-purpose').value = e.purpose || '';
+    document.getElementById('mile-notes').value   = e.notes || '';
+    tripStops = [...(e.stopIds || [])];
+    currentDistKm = e.km || 0;
+    renderRibbon();
+    setDistanceBar('ready', fmtKm(currentDistKm), `Editing — ${e.route || ''}`, fmt(e.reimbursement || 0), false);
+  } else if (e.type === 'expense') {
+    setType('expense');
+    document.getElementById('exp-date').value        = e.date || '';
+    document.getElementById('exp-amount').value      = e.amount || '';
+    document.getElementById('exp-description').value = e.description || '';
+    document.getElementById('exp-notes').value       = e.notes || '';
+    selectedCat = e.category || 'Meals';
+    document.querySelectorAll('.cat-pill').forEach(p => {
+      p.classList.toggle('selected', p.dataset.cat === selectedCat);
+    });
+  } else if (e.type === 'time') {
+    setType('time');
+    document.getElementById('time-period-start').value = e.periodStart || '';
+    document.getElementById('time-period-end').value   = e.periodEnd   || '';
+    document.getElementById('time-notes').value        = e.notes       || '';
+    renderTimeTypeRows();
+    Object.entries(e.hours || {}).forEach(([typeId, hrs]) => {
+      const inp = document.getElementById('hrs-' + typeId);
+      if (inp) inp.value = hrs;
+    });
+    updateTimeTotals();
+  }
+}
+
+function cancelEdit() {
+  editingEntryId = null;
+  document.getElementById('edit-banner').classList.remove('show');
+}
+
+function deleteEntry(id) {
+  const e = entries.find(x => x.id===id);
+  if (e?.receiptIds) e.receiptIds.forEach(r => delete receipts[r]);
+  entries = entries.filter(x => x.id!==id);
+  save(); renderHistory(); updateSummary(); setExportPreview();
+  showToast('Entry deleted', '🗑️');
+}
+function viewReceipts(id) {
+  const e = entries.find(x => x.id===id);
+  if (!e?.receiptIds) return;
+  const imgs = e.receiptIds.map(r => receipts[r]).filter(Boolean);
+  if (!imgs.length) return;
+  // Show in-app overlay
+  let overlay = document.getElementById('receipt-overlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'receipt-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.92);overflow-y:auto;padding:56px 16px 32px;';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '\u2715 Close';
+  closeBtn.style.cssText = 'position:fixed;top:12px;right:12px;z-index:1001;background:rgba(255,255,255,0.15);border:none;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;color:white;';
+  closeBtn.onclick = () => overlay.remove();
+  overlay.appendChild(closeBtn);
+  imgs.forEach(src => {
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = 'max-width:100%;display:block;margin-bottom:10px;border-radius:8px;';
+    overlay.appendChild(img);
+  });
+  document.body.appendChild(overlay);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUMMARY
+// ═══════════════════════════════════════════════════════════
+function setPeriod(el, p) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentPeriod = p;
+  updateSummary(); setExportPreview();
+}
+function periodEntries() {
+  const now = new Date();
+  return entries.filter(e => {
+    const d = new Date(e.date+'T00:00:00');
+    if (currentPeriod==='month')   return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    if (currentPeriod==='quarter') return Math.floor(d.getMonth()/3)===Math.floor(now.getMonth()/3) && d.getFullYear()===now.getFullYear();
+    if (currentPeriod==='year')    return d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+function updateSummary() {
+  const pe = periodEntries();
+  let km=0, mileReimb=0, expTotal=0, timeHours=0, timeEarnings=0;
+  const catTotals = {};
+  pe.forEach(e => {
+    if (e.type==='mileage') { km += e.km||0; mileReimb += e.reimbursement||0; }
+    else if (e.type==='expense') { expTotal += e.amount||0; catTotals[e.category] = (catTotals[e.category]||0)+e.amount; }
+    else if (e.type==='time') { timeHours += calcTimeTotalHours(e); timeEarnings += calcTimeEarnings(e); }
+  });
+  document.getElementById('sum-miles').textContent = km.toFixed(1);
+  document.getElementById('sum-mile-reimb').textContent = fmt(mileReimb);
+  document.getElementById('sum-expense').textContent = fmt(expTotal);
+  document.getElementById('sum-hours').textContent = timeHours.toFixed(2);
+  document.getElementById('sum-earnings').textContent = fmt(timeEarnings);
+  document.getElementById('sum-total').textContent = fmt(mileReimb+expTotal+timeEarnings);
+  const bd = document.getElementById('cat-breakdown');
+  const cats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  if (!cats.length) { bd.innerHTML = '<div style="color:var(--text3);font-size:13px">No expenses this period</div>'; return; }
+  const max = cats[0][1];
+  bd.innerHTML = cats.map(([cat,amt]) => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--text2)">${cat}</span>
+        <span style="font-family:var(--mono);color:var(--amber)">${fmt(amt)}</span>
+      </div>
+      <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${(amt/max*100).toFixed(1)}%;background:var(--amber);border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════
+function buildReport() {
+  const pe = periodEntries();
+  const label = document.getElementById('export-label').value || 'Expense Report';
+  let km=0, mileReimb=0, expTotal=0;
+  const lines = [`EXPENSE REPORT — ${label.toUpperCase()}`, '='.repeat(42), ''];
+  const mileE = pe.filter(e=>e.type==='mileage');
+  const expE  = pe.filter(e=>e.type==='expense');
+  if (mileE.length) {
+    lines.push('MILEAGE', '-'.repeat(22));
+    mileE.forEach(e => {
+      km += e.km; mileReimb += e.reimbursement;
+      lines.push(`${e.date}  ${e.purpose}`);
+      lines.push(`  Route: ${e.route}`);
+      lines.push(`  ${fmtKm(e.km)} × ${fmt(e.rateUsed||config.ratePerKm)}/km = ${fmt(e.reimbursement)}`);
+      if (e.notes) lines.push(`  Note: ${e.notes}`);
+      lines.push('');
+    });
+    lines.push(`MILEAGE SUBTOTAL: ${fmtKm(km)} = ${fmt(mileReimb)}`, '');
+  }
+  if (expE.length) {
+    lines.push('EXPENSES', '-'.repeat(22));
+    expE.forEach(e => {
+      expTotal += e.amount;
+      lines.push(`${e.date}  ${e.description}`);
+      lines.push(`  Category: ${e.category}  Amount: ${fmt(e.amount)}`);
+      if (e.notes) lines.push(`  Note: ${e.notes}`);
+      if (e.receiptIds?.length) lines.push(`  Receipts: ${e.receiptIds.length} attached`);
+      lines.push('');
+    });
+    lines.push(`EXPENSES SUBTOTAL: ${fmt(expTotal)}`, '');
+  }
+  lines.push('='.repeat(42), `TOTAL CLAIM: ${fmt(mileReimb+expTotal)}`);
+  lines.push(`Generated: ${new Date().toLocaleDateString('en-NZ')}`);
+  return lines.join('\n');
+}
+function setExportPreview() { document.getElementById('export-preview').textContent = buildReport(); }
+function copyReport() { navigator.clipboard.writeText(buildReport()).then(() => showToast('Copied!', '📋')); }
+async function emailReport() {
+  const email = document.getElementById('export-email').value.trim();
+  const label = document.getElementById('export-label').value || 'Expense Report';
+  const subject = 'Expense Report — ' + label;
+  const body = buildReport();
+
+  // 1. Try Web Share API (works great on mobile, and Chrome/Edge on desktop when configured)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: subject, text: body });
+      return;
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Share failed:', e);
+      // AbortError = user cancelled — fall through silently
+      else return;
+    }
+  }
+
+  // 2. Try mailto: — works if body is short enough (<2000 chars) or mail client is registered
+  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (mailto.length < 2000) {
+    window.location.href = mailto;
+    return;
+  }
+
+  // 3. Fallback: copy to clipboard and tell the user
+  try {
+    await navigator.clipboard.writeText(body);
+    showToast('Report copied — paste into your email app', '📋');
+  } catch {
+    showToast('Open your email app and paste the report manually', '📋');
+  }
+}
+function downloadCSV() {
+  const pe = periodEntries();
+  const header = 'Date,Type,Purpose/Description,Category,km,Reimbursement,Amount,Notes\n';
+  const rows = pe.map(e => e.type==='mileage'
+    ? [e.date,'Mileage',`"${e.purpose}"`,`"${e.route}"`,e.km.toFixed(2),e.reimbursement.toFixed(2),'',`"${e.notes||''}"`].join(',')
+    : [e.date,'Expense',`"${e.description}"`,e.category,'','',e.amount.toFixed(2),`"${e.notes||''}"`].join(',')
+  ).join('\n');
+  const blob = new Blob([header+rows], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'expenses.csv'; a.click();
+  showToast('CSV downloaded', '⬇️');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS PAGE — two-level navigation
+// ═══════════════════════════════════════════════════════════
+function showSettingsHome() {
+  document.getElementById('settings-home').style.display = 'block';
+  ['your-details','destinations','purposes','clients','invoice-defaults','advanced'].forEach(s => {
+    const el = document.getElementById('settings-sub-' + s);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function showSettingsSub(sub) {
+  document.getElementById('settings-home').style.display = 'none';
+  ['your-details','destinations','purposes','clients','invoice-defaults','advanced'].forEach(s => {
+    const el = document.getElementById('settings-sub-' + s);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('settings-sub-' + sub);
+  if (target) target.style.display = 'block';
+  renderSettingsPage(); // refresh data for the shown sub-screen
+}
+
+function renderSettingsPage() {
+  // Run migrations first
+  migrateConfig();
+
+  const apikeyEl = document.getElementById('setting-apikey');
+  const rateEl   = document.getElementById('setting-rate');
+  if (apikeyEl) apikeyEl.value = config.apiKey || '';
+  if (rateEl)   rateEl.value   = config.ratePerKm;
+  checkApiKeyNotice();
+
+  // Business details
+  const biz = config.bizDetails || {};
+  const bizName  = document.getElementById('setting-biz-name');
+  const bizAddr1 = document.getElementById('setting-biz-addr1');
+  const bizAddr2 = document.getElementById('setting-biz-addr2');
+  const bizEmail = document.getElementById('setting-biz-email');
+  const bizPhone = document.getElementById('setting-biz-phone');
+  const bizBank  = document.getElementById('setting-biz-bank');
+  if (bizName)  bizName.value  = biz.name         || '';
+  if (bizAddr1) bizAddr1.value = biz.addressLine1  || '';
+  if (bizAddr2) bizAddr2.value = biz.addressLine2  || '';
+  if (bizEmail) bizEmail.value = biz.email         || '';
+  if (bizPhone) bizPhone.value = biz.phone         || '';
+  if (bizBank)  bizBank.value  = biz.bank          || '';
+
+  // Clients list
+  const clientsListEl = document.getElementById('clients-list');
+  if (clientsListEl) {
+    const clients = config.clients || [];
+    clientsListEl.innerHTML = clients.length ? clients.map((c, i) => `
+      <div class="list-item">
+        <div class="list-item-icon">\U0001f3e2</div>
+        <div style="flex:1;min-width:0">
+          <div class="list-item-name">${c.name || 'Unnamed'}</div>
+          <div class="list-item-sub">${c.email || ''}${c.isDefault ? ' \u2022 Default' : ''}</div>
+        </div>
+        <div class="list-item-actions">
+          <button class="icon-btn" onclick="editClientEntry(${i})">\u270f\ufe0f</button>
+          <button class="icon-btn" onclick="deleteClientEntry(${i})">\U0001f5d1\ufe0f</button>
+        </div>
+      </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No clients yet</div></div>';
+  }
+
+  // Invoice defaults toggles
+  const invDefs = config.invoiceDefaults || { incTime: true, incMileage: false, incExpenses: false };
+  const dTimeEl = document.getElementById('inv-default-time');
+  const dMileEl = document.getElementById('inv-default-mileage');
+  const dExpEl  = document.getElementById('inv-default-expenses');
+  if (dTimeEl) dTimeEl.dataset.on = invDefs.incTime !== false ? 'true' : 'false';
+  if (dMileEl) dMileEl.dataset.on = invDefs.incMileage ? 'true' : 'false';
+  if (dExpEl)  dExpEl.dataset.on  = invDefs.incExpenses ? 'true' : 'false';
+
+  // Time types list
+  const tl = document.getElementById('time-types-list');
+  tl.innerHTML = (config.timeTypes||[]).length ? config.timeTypes.map((t,i) => `
+    <div class="list-item">
+      <div class="list-item-icon">🕐</div>
+      <div style="flex:1">
+        <div class="list-item-name">${t.name}</div>
+        <div class="list-item-sub">${fmt(t.rate)}/hr</div>
+      </div>
+      <div class="list-item-actions" style="margin-left:8px">
+        <button class="icon-btn" onclick="editTimeTypeRate(${i})">✏️</button>
+        <button class="icon-btn" onclick="deleteTimeType(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No time types yet</div></div>';
+
+  // Purposes list
+  const pl = document.getElementById('purposes-list');
+  pl.innerHTML = config.purposes.length ? config.purposes.map((p, i) => `
+    <div class="list-item">
+      <div class="list-item-icon">🗂️</div>
+      <div class="list-item-name">${p}</div>
+      <div class="list-item-actions">
+        <button class="icon-btn" onclick="deletePurpose(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No purposes yet</div></div>';
+
+  // Destinations list
+  const dl = document.getElementById('destinations-list');
+  dl.innerHTML = config.destinations.length ? config.destinations.map((d, i) => `
+    <div class="list-item">
+      <div class="list-item-icon">${d.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="list-item-name">${d.name}</div>
+        <div class="list-item-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.address
+          ? `<span style="color:var(--green)">✓</span> ${d.address}`
+          : `<span style="color:var(--amber)">⚠️ No address — tap ✏️ to add</span>`}</div>
+      </div>
+      <div class="list-item-actions" style="margin-left:8px;flex-shrink:0">
+        <button class="icon-btn" onclick="editDestAddress(${i})">✏️</button>
+        <button class="icon-btn" onclick="deleteDest(${i})">🗑️</button>
+      </div>
+    </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No destinations yet</div></div>';
+}
+
+// API key — loads the Maps JS SDK when saved
+function saveApiKey() {
+  const key = document.getElementById('setting-apikey').value.trim();
+  config.apiKey = key;
+  saveConfig();
+  checkApiKeyNotice();
+  if (key) loadMapsSDK(key);
+  showToast('API key saved', '🔑');
+}
+
+function testApiKey() {
+  const key = document.getElementById('setting-apikey').value.trim();
+  if (!key) { showToast('Enter a key first', '⚠️'); return; }
+  if (!window.google?.maps) {
+    showToast('Loading Maps SDK…', '⏳');
+    loadMapsSDK(key, () => testApiKey());
+    return;
+  }
+  showToast('Testing…', '⏳');
+  // Quick geocode test using the SDK's Geocoder (no CORS issues)
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: 'Auckland, New Zealand' }, (results, status) => {
+    if (status === 'OK') showToast('API key works! ✓', '✅');
+    else showToast('Key error: ' + status, '❌');
+  });
+}
+
+// Dynamically inject the Maps JS SDK <script> tag
+function loadMapsSDK(key, callback) {
+  // Remove any existing Maps script so we can reload with new key
+  const existing = document.getElementById('gmaps-sdk');
+  if (existing) existing.remove();
+  if (window.google?.maps) delete window.google.maps;
+
+  window._mapsCallback = function() {
+    if (callback) callback();
+  };
+
+  const s = document.createElement('script');
+  s.id  = 'gmaps-sdk';
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=_mapsCallback`;
+  s.async = true;
+  s.onerror = () => showToast('Failed to load Maps SDK — check API key', '❌');
+  document.head.appendChild(s);
+}
+
+// Rate
+function saveRate() {
+  const r = parseFloat(document.getElementById('setting-rate').value);
+  if (isNaN(r) || r < 0) { showToast('Invalid rate', '⚠️'); return; }
+  config.ratePerKm = r;
+  saveConfig();
+  showToast(`Rate set to ${fmt(r)}/km`, '💰');
+}
+
+// Purposes
+function addPurpose() {
+  const inp = document.getElementById('new-purpose-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  config.purposes.push(val);
+  saveConfig();
+  populatePurposeSelect();
+  renderSettingsPage();
+  inp.value = '';
+  showToast('Purpose added', '✓');
+}
+function deletePurpose(i) {
+  config.purposes.splice(i, 1);
+  saveConfig();
+  populatePurposeSelect();
+  renderSettingsPage();
+  showToast('Purpose removed', '🗑️');
+}
+
+// Destinations
+function addDestination() {
+  const name    = document.getElementById('new-dest-name').value.trim();
+  const icon    = document.getElementById('new-dest-icon').value.trim() || '📍';
+  const address = document.getElementById('new-dest-address').value.trim();
+  if (!name) { showToast('Enter a name', '⚠️'); return; }
+  if (!address) { showToast('Enter an address', '⚠️'); return; }
+  if (!document.getElementById('new-dest-address').dataset.verified) {
+    showToast('Please select an address from the suggestions', '⚠️'); return;
+  }
+  const addrInput = document.getElementById('new-dest-address');
+  const region = addrInput.dataset.detectedRegion || detectRegion(address);
+  config.destinations.push({ id: uid(), name, icon, address, region });
+  saveConfig();
+  renderDestGrid();
+  renderSettingsPage();
+  document.getElementById('new-dest-name').value = '';
+  document.getElementById('new-dest-icon').value = '';
+  document.getElementById('new-dest-address').value = '';
+  delete document.getElementById('new-dest-address').dataset.verified;
+  delete document.getElementById('new-dest-address').dataset.detectedRegion;
+  showToast(`${name} added`, '📍');
+}
+function deleteDest(i) {
+  config.destinations.splice(i, 1);
+  saveConfig();
+  renderDestGrid();
+  renderSettingsPage();
+  showToast('Destination removed', '🗑️');
+}
+
+let editingDestIdx = null;
+let editingEntryId = null;
+function editDestAddress(i) {
+  editingDestIdx = i;
+  const d = config.destinations[i];
+  document.getElementById('edit-addr-title').textContent = `📍 Edit address — ${d.name}`;
+  const inp = document.getElementById('edit-addr-input');
+  inp.value = d.address || '';
+  inp.dataset.verified = d.address ? '1' : '';
+  document.getElementById('edit-addr-verified').innerHTML = d.address
+    ? `<span class="ac-verified">✓ Verified</span>` : '';
+  document.getElementById('edit-addr-suggestions').classList.remove('open');
+  document.getElementById('edit-addr-modal').classList.add('open');
+}
+function saveEditedAddress() {
+  const inp = document.getElementById('edit-addr-input');
+  if (!inp.value.trim()) { showToast('Enter an address', '⚠️'); return; }
+  if (!inp.dataset.verified) { showToast('Please select an address from the suggestions', '⚠️'); return; }
+  config.destinations[editingDestIdx].address = inp.value.trim();
+  if (inp.dataset.detectedRegion) {
+    config.destinations[editingDestIdx].region = inp.dataset.detectedRegion;
+  } else if (!config.destinations[editingDestIdx].region) {
+    config.destinations[editingDestIdx].region = detectRegion(inp.value.trim());
+  }
+  saveConfig();
+  renderSettingsPage();
+  closeModal('edit-addr-modal');
+  showToast('Address updated ✓', '📍');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GOOGLE PLACES AUTOCOMPLETE — Maps JS SDK (no CORS issues)
+// ═══════════════════════════════════════════════════════════
+let acTimer = null;
+let acSessionToken = null;
+
+function getAcToken() {
+  if (!acSessionToken && window.google?.maps?.places)
+    acSessionToken = new google.maps.places.AutocompleteSessionToken();
+  return acSessionToken;
+}
+
+function onAddressInput(inputEl, listId) {
+  delete inputEl.dataset.verified;
+  const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
+  if (verifiedEl) verifiedEl.innerHTML = '';
+
+  const list  = document.getElementById(listId);
+  const query = inputEl.value.trim();
+  if (query.length < 3) { list.classList.remove('open'); return; }
+
+  clearTimeout(acTimer);
+  list.innerHTML = `<div class="autocomplete-spinner">⏳ Searching…</div>`;
+  list.classList.add('open');
+  acTimer = setTimeout(() => fetchPlaceSuggestions(query, inputEl, listId), 350);
+}
+
+function fetchPlaceSuggestions(query, inputEl, listId) {
+  const list = document.getElementById(listId);
+
+  if (!config.apiKey) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Save your API key in Settings first</div>`;
+    return;
+  }
+  if (!window.google?.maps?.places) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Maps not loaded yet — save your API key first</div>`;
+    return;
+  }
+
+  const svc = new google.maps.places.AutocompleteService();
+  svc.getPlacePredictions({
+    input: query,
+    sessionToken: getAcToken(),
+    componentRestrictions: { country: 'nz' }
+  }, (predictions, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS || !predictions?.length) {
+      list.innerHTML = `<div class="autocomplete-spinner">No results found</div>`;
+      return;
+    }
+    if (status !== google.maps.places.PlacesServiceStatus.OK) {
+      list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ Places error: ${status}</div>`;
+      return;
+    }
+    list.innerHTML = predictions.map(p => {
+      const main = p.structured_formatting?.main_text || p.description;
+      const sub  = p.structured_formatting?.secondary_text || '';
+      return `<div class="autocomplete-item"
+        onmousedown="selectPlace('${p.place_id}','${escapeAttr(p.description)}','${inputEl.id}','${listId}')"
+        ontouchstart="selectPlace('${p.place_id}','${escapeAttr(p.description)}','${inputEl.id}','${listId}')">
+        <div class="ac-main">${main}</div>
+        ${sub ? `<div class="ac-sub">${sub}</div>` : ''}
+      </div>`;
+    }).join('');
+    list.classList.add('open');
+  });
+}
+
+function selectPlace(placeId, description, inputId, listId) {
+  const inputEl = document.getElementById(inputId);
+  const list    = document.getElementById(listId);
+  list.classList.remove('open');
+
+  if (!window.google?.maps?.places) {
+    inputEl.value = description;
+    inputEl.dataset.verified = '1';
+    return;
+  }
+
+  // Use a throw-away div as the PlacesService anchor (required by SDK)
+  const dummy = document.createElement('div');
+  const svc   = new google.maps.places.PlacesService(dummy);
+  svc.getDetails({
+    placeId,
+    fields: ['formatted_address'],
+    sessionToken: acSessionToken
+  }, (place, status) => {
+    const addr = (status === google.maps.places.PlacesServiceStatus.OK && place?.formatted_address)
+      ? place.formatted_address
+      : description;
+
+    inputEl.value = addr;
+    inputEl.dataset.verified = '1';
+    inputEl.dataset.detectedRegion = detectRegion(addr);
+    acSessionToken = null; // session complete — reset token
+
+    const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
+    if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
+  });
+}
+
+function detectRegion(address) {
+  const a = address || '';
+  if (/hutt/i.test(a)) return 'Hutt Valley';
+  if (/porirua/i.test(a)) return 'Porirua';
+  if (/masterton|carterton|greytown/i.test(a)) return 'Wairarapa';
+  return 'Wellington';
+}
+
+function delayHide(listId) {
+  setTimeout(() => { document.getElementById(listId)?.classList.remove('open'); }, 200);
+}
+function escapeAttr(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODALS / CLEAR DATA
+// ═══════════════════════════════════════════════════════════
+function confirmClear() { document.getElementById('confirm-modal').classList.add('open'); }
+function clearAllData() {
+  entries = []; receipts = {};
+  save(); renderHistory(); updateSummary(); setExportPreview();
+  closeModal('confirm-modal');
+  showToast('All data cleared', '🗑️');
+}
+document.getElementById('confirm-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('confirm-modal')) closeModal('confirm-modal');
+});
+document.getElementById('edit-addr-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('edit-addr-modal')) closeModal('edit-addr-modal');
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TIME ENTRY
+// ═══════════════════════════════════════════════════════════
+function setTimePeriodDefaults() {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const start = new Date(y, m, 1).toISOString().split('T')[0];
+  const end   = new Date(y, m+1, 0).toISOString().split('T')[0];
+  document.getElementById('time-period-start').value = start;
+  document.getElementById('time-period-end').value   = end;
+}
+
+function renderTimeTypeRows() {
+  const container = document.getElementById('time-type-rows');
+  if (!container) return;
+  container.innerHTML = (config.timeTypes || []).map(t => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${t.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmt(t.rate)}/hr</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" id="hrs-${t.id}" min="0" step="0.25" placeholder="0"
+          style="width:80px;font-size:16px;text-align:right;padding:10px 10px"
+          oninput="updateTimeTotals()" />
+        <span style="font-size:12px;color:var(--text3)">hrs</span>
+      </div>
+    </div>`).join('');
+  updateTimeTotals();
+}
+
+function updateTimeTotals() {
+  let totalHrs = 0, totalEarnings = 0;
+  (config.timeTypes || []).forEach(t => {
+    const inp = document.getElementById('hrs-' + t.id);
+    const hrs = parseFloat(inp?.value || 0) || 0;
+    totalHrs += hrs;
+    totalEarnings += hrs * t.rate;
+  });
+  document.getElementById('time-total-hours').textContent = totalHrs.toFixed(2) + ' hrs';
+  document.getElementById('time-total-earnings').textContent = fmt(totalEarnings);
+}
+
+function saveTimeEntry() {
+  const periodStart = document.getElementById('time-period-start').value;
+  const periodEnd   = document.getElementById('time-period-end').value;
+  if (!periodStart || !periodEnd) { showToast('Select a period', '⚠️'); return; }
+  if (periodEnd < periodStart)    { showToast('End must be after start', '⚠️'); return; }
+
+  const hours = {};
+  let hasHours = false;
+  (config.timeTypes || []).forEach(t => {
+    const inp = document.getElementById('hrs-' + t.id);
+    const h = parseFloat(inp?.value || 0) || 0;
+    if (h > 0) { hours[t.id] = h; hasHours = true; }
+  });
+  if (!hasHours) { showToast('Enter at least some hours', '⚠️'); return; }
+
+  const entry = {
+    id: uid(), type: 'time',
+    date: periodStart, // used for grouping/filtering
+    periodStart, periodEnd, hours,
+    notes: document.getElementById('time-notes').value.trim(),
+    createdAt: Date.now()
+  };
+  entries.unshift(entry);
+  save();
+  const totalHrs = calcTimeTotalHours(entry);
+  showToast(totalHrs.toFixed(2) + ' hrs saved!', '🕐');
+
+  // Reset
+  renderTimeTypeRows();
+  document.getElementById('time-notes').value = '';
+  setTimePeriodDefaults();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TIME TYPE SETTINGS
+// ═══════════════════════════════════════════════════════════
+function addTimeType() {
+  const name = document.getElementById('new-timetype-name').value.trim();
+  const rate = parseFloat(document.getElementById('new-timetype-rate').value) || 0;
+  if (!name) { showToast('Enter a name', '⚠️'); return; }
+  config.timeTypes = config.timeTypes || [];
+  config.timeTypes.push({ id: uid(), name, rate });
+  saveConfig();
+  renderSettingsPage();
+  document.getElementById('new-timetype-name').value = '';
+  document.getElementById('new-timetype-rate').value = '';
+  showToast(name + ' added', '✓');
+}
+function deleteTimeType(i) {
+  config.timeTypes.splice(i, 1);
+  saveConfig();
+  renderSettingsPage();
+  showToast('Time type removed', '🗑️');
+}
+function editTimeTypeRate(i) {
+  const t = config.timeTypes[i];
+  const newRate = prompt('Hourly rate for "' + t.name + '" ($):', t.rate);
+  if (newRate === null) return;
+  const r = parseFloat(newRate);
+  if (isNaN(r) || r < 0) { showToast('Invalid rate', '⚠️'); return; }
+  config.timeTypes[i].rate = r;
+  saveConfig();
+  renderSettingsPage();
+  showToast('Rate updated', '✓');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUSINESS & CLIENT DETAILS
+// ═══════════════════════════════════════════════════════════
+function saveBusinessDetails() {
+  config.bizDetails = {
+    name:         (document.getElementById('setting-biz-name')  || {}).value?.trim() || '',
+    addressLine1: (document.getElementById('setting-biz-addr1') || {}).value?.trim() || '',
+    addressLine2: (document.getElementById('setting-biz-addr2') || {}).value?.trim() || '',
+    email:        (document.getElementById('setting-biz-email') || {}).value?.trim() || '',
+    phone:        (document.getElementById('setting-biz-phone') || {}).value?.trim() || '',
+    bank:         (document.getElementById('setting-biz-bank')  || {}).value?.trim() || ''
+  };
+  saveConfig();
+  showToast('Business details saved', '✓');
+}
+
+// ── CLIENT MANAGEMENT ──
+function saveClientEntry() {
+  const idVal = (document.getElementById('edit-client-id') || {}).value || '';
+  const entry = {
+    id:           idVal || uid(),
+    name:         (document.getElementById('setting-client-name')  || {}).value?.trim() || '',
+    addressLine1: (document.getElementById('setting-client-addr1') || {}).value?.trim() || '',
+    addressLine2: (document.getElementById('setting-client-addr2') || {}).value?.trim() || '',
+    phone:        (document.getElementById('setting-client-phone') || {}).value?.trim() || '',
+    email:        (document.getElementById('setting-client-email') || {}).value?.trim() || '',
+    isDefault:    !(config.clients || []).some(c => c.isDefault && c.id !== idVal)
+  };
+  if (!entry.name) { showToast('Enter client name', '⚠️'); return; }
+  config.clients = config.clients || [];
+  if (idVal) {
+    const idx = config.clients.findIndex(c => c.id === idVal);
+    if (idx >= 0) config.clients[idx] = entry;
+    else config.clients.push(entry);
+  } else {
+    config.clients.push(entry);
+  }
+  saveConfig();
+  renderSettingsPage();
+  clearClientForm();
+  showToast('Client saved', '✓');
+}
+function editClientEntry(i) {
+  const c = (config.clients || [])[i];
+  if (!c) return;
+  const f = id => document.getElementById(id);
+  if (f('edit-client-id'))       f('edit-client-id').value       = c.id || '';
+  if (f('setting-client-name'))  f('setting-client-name').value  = c.name || '';
+  if (f('setting-client-addr1')) f('setting-client-addr1').value = c.addressLine1 || '';
+  if (f('setting-client-addr2')) f('setting-client-addr2').value = c.addressLine2 || '';
+  if (f('setting-client-phone')) f('setting-client-phone').value = c.phone || '';
+  if (f('setting-client-email')) f('setting-client-email').value = c.email || '';
+}
+function deleteClientEntry(i) {
+  (config.clients || []).splice(i, 1);
+  saveConfig();
+  renderSettingsPage();
+  showToast('Client removed', '🗑️');
+}
+function clearClientForm() {
+  ['edit-client-id','setting-client-name','setting-client-addr1','setting-client-addr2','setting-client-phone','setting-client-email']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INVOICE PANEL
+// ═══════════════════════════════════════════════════════════
+function setInvPeriod(el, p) {
+  document.querySelectorAll('#inv-period-row .period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentInvPeriod = p;
+  updateInvoicePanel();
+}
+
+function invPeriodEntries() {
+  const now = new Date();
+  return entries.filter(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    if (currentInvPeriod === 'month')   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (currentInvPeriod === 'quarter') return Math.floor(d.getMonth()/3) === Math.floor(now.getMonth()/3) && d.getFullYear() === now.getFullYear();
+    if (currentInvPeriod === 'year')    return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+}
+
+function updateInvoicePanel() {
+  // Apply invoice defaults from config (once per session, when panel first opens)
+  const defaults = config.invoiceDefaults || { incTime: true, incMileage: false, incExpenses: false };
+  const timeEl = document.getElementById('toggle-time');
+  const mileEl = document.getElementById('toggle-mileage');
+  const expEl  = document.getElementById('toggle-expenses');
+  if (timeEl && !timeEl.dataset.defaultsApplied) {
+    timeEl.dataset.on = defaults.incTime !== false ? 'true' : 'false';
+    mileEl.dataset.on = defaults.incMileage ? 'true' : 'false';
+    expEl.dataset.on  = defaults.incExpenses ? 'true' : 'false';
+    timeEl.dataset.defaultsApplied = '1';
+    mileEl.dataset.defaultsApplied = '1';
+    expEl.dataset.defaultsApplied  = '1';
+  }
+  const pe = invPeriodEntries();
+  let hours = 0, earnings = 0, mileReimb = 0, expenses = 0;
+  pe.forEach(e => {
+    if (e.type === 'time') { hours += calcTimeTotalHours(e); earnings += calcTimeEarnings(e); }
+    else if (e.type === 'mileage') mileReimb += e.reimbursement || 0;
+    else if (e.type === 'expense') expenses += e.amount || 0;
+  });
+  document.getElementById('inv-hours').textContent    = hours.toFixed(2);
+  document.getElementById('inv-expenses').textContent = fmt(expenses + mileReimb);
+  document.getElementById('inv-total').textContent    = fmt(earnings + mileReimb + expenses);
+
+  // Auto-set invoice number and date
+  const invNum = document.getElementById('inv-number');
+  if (!invNum.value) invNum.value = 'INV-' + String((config.lastInvoiceNumber || 0) + 1).padStart(3, '0');
+  const invDate = document.getElementById('inv-date');
+  if (!invDate.value) invDate.value = new Date().toISOString().split('T')[0];
+  const invLabel = document.getElementById('inv-period-label');
+  if (!invLabel.value) invLabel.value = new Date().toLocaleDateString('en-NZ', { month: 'long', year: 'numeric' });
+}
+
+function buildInvoiceHTML(forPrint) {
+  const pe = invPeriodEntries();
+  const incTime     = document.getElementById('toggle-time').dataset.on === 'true';
+  const incMileage  = document.getElementById('toggle-mileage').dataset.on === 'true';
+  const incExpenses = document.getElementById('toggle-expenses').dataset.on === 'true';
+  const invNum      = document.getElementById('inv-number').value || 'INV-001';
+  const invDate     = document.getElementById('inv-date').value;
+  const invLabel    = document.getElementById('inv-period-label').value;
+  const biz = config.bizDetails || {};
+  // Use first default client or first client
+  const clients = config.clients || [];
+  const cli = clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
+
+  let timeRows = '', mileRows = '', expRows = '';
+  let timeTotal = 0, mileTotal = 0, expTotal = 0;
+
+  if (incTime) {
+    const timeEntries = pe.filter(e => e.type === 'time');
+    if (timeEntries.length) {
+      // Group hours by time type across all entries
+      const typeTotals = {};
+      timeEntries.forEach(e => {
+        Object.entries(e.hours || {}).forEach(([tid, hrs]) => {
+          typeTotals[tid] = (typeTotals[tid] || 0) + (hrs || 0);
+        });
+      });
+      const timeRowParts = [];
+      Object.entries(typeTotals).forEach(([tid, hrs]) => {
+        if (!hrs) return;
+        const tt = config.timeTypes.find(t => t.id === tid);
+        const name = tt ? tt.name : tid; // fall back to id if type was deleted
+        const rate = tt ? tt.rate : 0;
+        const earn = hrs * rate;
+        timeTotal += earn;
+        timeRowParts.push(`<tr><td>${name}</td><td style="text-align:center">${hrs.toFixed(2)}</td><td style="text-align:right">${tt ? fmt(rate)+'/hr' : 'N/A'}</td><td style="text-align:right">${fmt(earn)}</td></tr>`);
+      });
+      timeRows = timeRowParts.join('');
+    }
+  }
+
+  if (incMileage) {
+    const mileEntries = pe.filter(e => e.type === 'mileage');
+    mileEntries.forEach(e => {
+      mileTotal += e.reimbursement || 0;
+      mileRows += `<tr><td>${e.purpose} — ${e.route}</td><td style="text-align:center">${e.km} km</td><td style="text-align:right">${fmt(e.rateUsed || config.ratePerKm)}/km</td><td style="text-align:right">${fmt(e.reimbursement)}</td></tr>`;
+    });
+  }
+
+  if (incExpenses) {
+    const expEntries = pe.filter(e => e.type === 'expense');
+    expEntries.forEach(e => {
+      expTotal += e.amount || 0;
+      expRows += `<tr><td>${e.description} (${e.category})</td><td></td><td></td><td style="text-align:right">${fmt(e.amount)}</td></tr>`;
+    });
+  }
+
+  const grandTotal = timeTotal + mileTotal + expTotal;
+  const formattedDate = invDate ? new Date(invDate + 'T00:00:00').toLocaleDateString('en-NZ', { day:'numeric', month:'long', year:'numeric' }) : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Invoice ${invNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: white; padding: 40px; max-width: 800px; margin: 0 auto; }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .inv-title { font-size: 36px; font-weight: 800; color: #1a1a2e; letter-spacing: -1px; }
+  .inv-meta { text-align: right; color: #666; line-height: 1.8; }
+  .inv-meta strong { color: #1a1a2e; font-size: 15px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 36px; padding: 24px; background: #f7f8fc; border-radius: 10px; }
+  .party-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+  .party-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .party-detail { color: #555; line-height: 1.6; font-size: 13px; white-space: pre-line; }
+  .period-bar { background: #1a1a2e; color: white; padding: 10px 18px; border-radius: 6px; margin-bottom: 24px; font-size: 13px; }
+  .period-bar strong { font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  thead th { background: #1a1a2e; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: left; }
+  thead th:last-child { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .section-header td { background: #f0f2f9; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; }
+  .subtotal-row td { font-weight: 600; background: #f7f8fc; }
+  .total-box { margin-top: 20px; text-align: right; }
+  .total-box .grand { font-size: 28px; font-weight: 800; color: #1a1a2e; }
+  .total-box .grand-label { font-size: 13px; color: #888; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bank-box { margin-top: 32px; padding: 18px; background: #f0f8f0; border: 1px solid #c3e6c3; border-radius: 8px; }
+  .bank-box .bank-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2d7a2d; margin-bottom: 6px; }
+  .bank-box .bank-num { font-size: 20px; font-weight: 800; color: #1a1a2e; font-family: monospace; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #aaa; font-size: 11px; text-align: center; }
+  @media print { body { padding: 20px; } @page { margin: 15mm; } }
+</style></head><body>
+
+<div class="inv-header">
+  <div>
+    <div class="inv-title">INVOICE</div>
+    <div style="color:#888;margin-top:4px;font-size:13px">🕐 Time &amp; Expense Log</div>
+  </div>
+  <div class="inv-meta">
+    <strong>${invNum}</strong><br>
+    Date: ${formattedDate}<br>
+    Period: ${invLabel}
+  </div>
+</div>
+
+<div class="parties">
+  <div>
+    <div class="party-label">From</div>
+    <div class="party-name">${biz.name || 'Your Name'}</div>
+    <div class="party-detail">${[biz.addressLine1, biz.addressLine2, biz.phone, biz.email].filter(Boolean).join('\\n')}</div>\n  </div>
+  <div>
+    <div class="party-label">To</div>
+    <div class="party-name">${cli.name || 'Client Name'}</div>
+    <div class="party-detail">${[cli.addressLine1, cli.addressLine2, cli.phone, cli.email].filter(Boolean).join('\\n')}</div>\n  </div>
+</div>
+
+<div class="period-bar">Billing period: <strong>${invLabel}</strong></div>
+
+<table>
+  <thead><tr><th>Description</th><th style="text-align:center">Qty / Hrs</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+  <tbody>
+    ${timeRows ? `<tr class="section-header"><td colspan="4">Time</td></tr>${timeRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Time Subtotal</td><td style="text-align:right">${fmt(timeTotal)}</td></tr>` : ''}
+    ${mileRows ? `<tr class="section-header"><td colspan="4">Mileage</td></tr>${mileRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Mileage Subtotal</td><td style="text-align:right">${fmt(mileTotal)}</td></tr>` : ''}
+    ${expRows  ? `<tr class="section-header"><td colspan="4">Expenses</td></tr>${expRows}<tr class="subtotal-row"><td colspan="3" style="text-align:right">Expenses Subtotal</td><td style="text-align:right">${fmt(expTotal)}</td></tr>` : ''}
+  </tbody>
+</table>
+
+<div class="total-box">
+  <div class="grand-label">Total Due</div>
+  <div class="grand">${fmt(grandTotal)}</div>
+</div>
+
+${biz.bank ? `<div class="bank-box"><div class="bank-label">💳 Payment — Bank Transfer</div><div class="bank-num">${biz.bank}</div><div style="font-size:12px;color:#555;margin-top:4px">Reference: ${invNum}</div></div>` : ''}
+
+<div class="footer">Generated by Time &amp; Expense Log · ${new Date().toLocaleDateString('en-NZ')}</div>
+</body></html>`;
+}
+
+function showInvoiceOverlay(html, autoPrint) {
+  let overlay = document.getElementById('invoice-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'invoice-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:white;display:flex;flex-direction:column;';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '\u2715 Close';
+    closeBtn.style.cssText = 'position:absolute;top:12px;right:12px;z-index:1001;background:rgba(0,0,0,0.08);border:none;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;';
+    closeBtn.onclick = () => overlay.remove();
+    const iframe = document.createElement('iframe');
+    iframe.id = 'invoice-frame';
+    iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%;';
+    overlay.appendChild(closeBtn);
+    overlay.appendChild(iframe);
+    document.body.appendChild(overlay);
+  }
+  const frame = document.getElementById('invoice-frame');
+  frame.srcdoc = html;
+  if (autoPrint) {
+    frame.onload = () => { try { frame.contentWindow.print(); } catch(e) {} };
+  }
+}
+
+function previewInvoice() {
+  showInvoiceOverlay(buildInvoiceHTML(false), false);
+}
+
+function generateInvoice() {
+  const invNum = document.getElementById('inv-number').value || 'INV-001';
+  showInvoiceOverlay(buildInvoiceHTML(true), true);
+  // Increment invoice number
+  const num = parseInt((invNum.match(/\d+$/) || ['0'])[0]) || 0;
+  config.lastInvoiceNumber = num;
+  const prefix = invNum.replace(/\d+$/, '');
+  document.getElementById('inv-number').value = prefix + String(num + 1).padStart(3, '0');
+  saveConfig();
+}
+
+async function emailInvoice() {
+  const invNum = document.getElementById('inv-number').value || 'Invoice';
+  const invLabel = document.getElementById('inv-period-label').value || '';
+  const subject = `Invoice ${invNum} — ${invLabel}`;
+  const body = `Please find attached invoice ${invNum} for ${invLabel}.\n\nTotal: ${document.getElementById('inv-total').textContent}\n\nPlease view the full invoice at: [paste invoice link here]`;
+  const clients = config.clients || [];
+  const cli = clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
+
+  if (navigator.share) {
+    try { await navigator.share({ title: subject, text: body }); return; } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  const mailto = `mailto:${encodeURIComponent(cli.email||'')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (mailto.length < 2000) { window.location.href = mailto; return; }
+  await navigator.clipboard.writeText(body);
+  showToast('Invoice text copied — paste into email', '📋');
+}
+
+function toggleInvInclude(type) {
+  const el = document.getElementById('toggle-' + type);
+  const isOn = el.dataset.on === 'true';
+  el.dataset.on = isOn ? 'false' : 'true';
+}
+
+function toggleInvDefault(key) {
+  const elMap = { incTime: 'inv-default-time', incMileage: 'inv-default-mileage', incExpenses: 'inv-default-expenses' };
+  const el = document.getElementById(elMap[key]);
+  if (!el) return;
+  el.dataset.on = el.dataset.on === 'true' ? 'false' : 'true';
+}
+
+function saveInvoiceDefaults() {
+  const tEl = document.getElementById('inv-default-time');
+  const mEl = document.getElementById('inv-default-mileage');
+  const eEl = document.getElementById('inv-default-expenses');
+  config.invoiceDefaults = {
+    incTime:     tEl ? tEl.dataset.on === 'true' : true,
+    incMileage:  mEl ? mEl.dataset.on === 'true' : false,
+    incExpenses: eEl ? eEl.dataset.on === 'true' : false
+  };
+  saveConfig();
+  showToast('Invoice defaults saved', '\u2713');
+}
+
+function formatBankAccount(input) {
+  // NZ format: ##-####-#######-###
+  let v = input.value.replace(/\D/g, '');
+  const parts = [];
+  if (v.length > 0)  parts.push(v.slice(0, 2));
+  if (v.length > 2)  parts.push(v.slice(2, 6));
+  if (v.length > 6)  parts.push(v.slice(6, 13));
+  if (v.length > 13) parts.push(v.slice(13, 16));
+  input.value = parts.join('-');
+}
+
+// ── DATA MIGRATIONS ──
+function migrateConfig() {
+  // 1. Migrate string purposes to objects
+  if (config.purposes && config.purposes.some(p => typeof p === 'string')) {
+    config.purposes = config.purposes.map(p =>
+      typeof p === 'string' ? { text: p, usageCount: 0 } : p
+    );
+  }
+  // 2. Migrate clientDetails to clients array
+  if (config.clientDetails && !(config.clients && config.clients.length)) {
+    const cd = config.clientDetails;
+    config.clients = [{
+      id: uid(),
+      name:         cd.name    || '',
+      addressLine1: cd.address ? cd.address.split('\n')[0] : '',
+      addressLine2: cd.address ? cd.address.split('\n').slice(1).join(' ') : '',
+      phone:        cd.phone   || '',
+      email:        cd.email   || '',
+      isDefault:    true
+    }];
+  }
+  // 3. Migrate bizDetails.address to addressLine1 + addressLine2
+  if (config.bizDetails?.address && !config.bizDetails.addressLine1) {
+    const addr = config.bizDetails.address;
+    const sep = addr.indexOf('\n') > -1 ? '\n' : ',';
+    const idx = addr.indexOf(sep);
+    if (idx > -1) {
+      config.bizDetails.addressLine1 = addr.slice(0, idx).trim();
+      config.bizDetails.addressLine2 = addr.slice(idx + 1).trim();
+    } else {
+      config.bizDetails.addressLine1 = addr.trim();
+      config.bizDetails.addressLine2 = '';
+    }
+  }
+}
+</script>
+</body>
+</html>
