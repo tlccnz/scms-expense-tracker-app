@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IRA Withdrawal Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f7;
+      padding: 30px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 24px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .row {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #555;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .output {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .sub {
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>💸 IRA Withdrawal Calculator</h1>
+
+<div class="card">
+
+  <div class="row">
+    <label>Target Net (NZD)</label>
+    <input type="range" id="nzdSlider" min="1000" max="50000" step="500" value="16000">
+    <div class="output" id="nzdValue">$16,000 NZD</div>
+  </div>
+
+  <div class="row">
+    <label>Exchange Rate (NZD per USD)</label>
+    <input type="number" id="fx" value="1.75" step="0.01">
+  </div>
+
+  <div class="row">
+    <label>FX Buffer (%)</label>
+    <input type="number" id="buffer" value="2" step="0.1">
+    <div class="sub">Adds margin for spread / movement</div>
+  </div>
+
+  <div class="row">
+    <label>NZ Tax Rate</label>
+    <input type="number" id="tax" value="0.39" step="0.01">
+  </div>
+
+  <div class="row">
+    <label>IRS Penalty</label>
+    <input type="number" id="penalty" value="0.10" step="0.01">
+  </div>
+
+  <div class="row">
+    <label>Required Withdrawal</label>
+    <div class="output" id="usdOutput">$0 USD</div>
+    <div class="sub" id="details"></div>
+  </div>
+
+</div>
+
+<script>
+  const slider = document.getElementById("nzdSlider");
+  const nzdValue = document.getElementById("nzdValue");
+  const usdOutput = document.getElementById("usdOutput");
+  const details = document.getElementById("details");
+
+  const fxInput = document.getElementById("fx");
+  const bufferInput = document.getElementById("buffer");
+  const taxInput = document.getElementById("tax");
+  const penaltyInput = document.getElementById("penalty");
+
+  function format(n) {
+    return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+  }
+
+  function calculate() {
+    const targetNZD = parseFloat(slider.value);
+    const fx = parseFloat(fxInput.value);
+    const buffer = parseFloat(bufferInput.value) / 100;
+    const tax = parseFloat(taxInput.value);
+    const penalty = parseFloat(penaltyInput.value);
+
+    // Apply FX buffer (worse rate)
+    const effectiveFx = fx * (1 - buffer);
+
+    const netUsdNeeded = targetNZD / effectiveFx;
+    const keepRate = (1 - penalty) - tax;
+
+    const withdrawal = netUsdNeeded / keepRate;
+
+    nzdValue.textContent = `$${format(targetNZD)} NZD`;
+    usdOutput.textContent = `$${format(withdrawal)} USD`;
+
+    details.textContent =
+      `Effective FX: ${effectiveFx.toFixed(4)} | Keep rate: ${(keepRate*100).toFixed(1)}%`;
+  }
+
+  slider.addEventListener("input", calculate);
+  fxInput.addEventListener("input", calculate);
+  bufferInput.addEventListener("input", calculate);
+  taxInput.addEventListener("input", calculate);
+  penaltyInput.addEventListener("input", calculate);
+
+  calculate();
+</script>
+
+</body>
+</html>
