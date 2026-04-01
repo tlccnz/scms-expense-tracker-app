@@ -1302,7 +1302,7 @@ function populatePurposeSelect() {
 function renderDestGrid() {
   const grid = document.getElementById('dest-grid');
   const dests = config.destinations || [];
-  const home = dests.find(d => d.name.toLowerCase() === 'home' || d.icon === '\U0001f3e0');
+  const home = dests.find(d => d.name.toLowerCase() === 'home' || d.icon === '🏠');
   const others = dests.filter(d => d !== home);
 
   // Group others by region, sorted alpha within region
@@ -1908,14 +1908,14 @@ function renderSettingsPage() {
     const clients = config.clients || [];
     clientsListEl.innerHTML = clients.length ? clients.map((c, i) => `
       <div class="list-item">
-        <div class="list-item-icon">\U0001f3e2</div>
+        <div class="list-item-icon">🏢</div>
         <div style="flex:1;min-width:0">
           <div class="list-item-name">${c.name || 'Unnamed'}</div>
           <div class="list-item-sub">${c.email || ''}${c.isDefault ? ' \u2022 Default' : ''}</div>
         </div>
         <div class="list-item-actions">
           <button class="icon-btn" onclick="editClientEntry(${i})">\u270f\ufe0f</button>
-          <button class="icon-btn" onclick="deleteClientEntry(${i})">\U0001f5d1\ufe0f</button>
+          <button class="icon-btn" onclick="deleteClientEntry(${i})">🗑️</button>
         </div>
       </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No clients yet</div></div>';
   }

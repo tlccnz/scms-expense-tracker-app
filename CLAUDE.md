@@ -160,3 +160,7 @@ invoiceDefaults: { incTime: true, incMileage: false, incExpenses: false }     //
 6. **Address lookup via Maps API in Settings** - Address Line 1 fields in Settings -> Your Details and Settings -> Clients (both add and edit forms) use Places autocomplete. Selecting a suggestion auto-fills Line 1 and Line 2. Verified badge shown on selection. All calls routed through Worker proxy POST /api/maps/places (key never in browser).
 
 7. **Bug: Trip purpose shows [object Object]** - When adding a new purpose in Settings -> Purposes, the saved entry displays as "[object Object]" instead of the typed name. Likely a regression from the v3 purposes migration to objects ({text, usageCount}) — the addPurpose() function may be pushing a plain string while renderPurposes() expects an object, or vice versa.
+
+8. **Bug: No delete button for clients** - Settings -> Clients shows an edit button per client but no delete button. Add a delete (🗑️) button alongside the edit (✏️) button in the clients list. Should prompt for confirmation before deleting.
+
+9. **Bug: Emoji rendering as codepoint in clients list** - The 🏢 icon (U+1F3E2) is rendering as the literal string "U0001f3e2" somewhere in the clients list UI. Likely a str_replace corruption of the emoji in a template literal. Use Python to fix — find the broken string and replace with the correct emoji character.
