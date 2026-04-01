@@ -173,6 +173,8 @@ invoiceDefaults: { incTime: true, incMileage: false, incExpenses: false }     //
 
 13. **[LOW] Invoice tab — label client chip row** - The scrollable client chip row has no heading. Add a small "Invoice To" label above or before the chips so the purpose is clear.
 
+15. **[LOW] Danger Zone — two-tier delete** - Currently "Delete All Data" only clears entries/receipts. Add two options: (1) "Clear Transactions" — deletes entries + receipts only, keeps config/settings; (2) "Reset Everything" — full nuke of entries, receipts, config, and cloud KV data, returning app to factory state. Both need a confirmation modal with clear warning text. Useful for testing.
+
 14. **Invoice preview — multiple fixes:**
     - Remove the "Period:" line from top-right meta (invLabel already shown in billing period bar; user wants it removed)
     - Change `Date:` label to `Invoice Date:`
