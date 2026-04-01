@@ -2125,31 +2125,33 @@ async function selectPlace(placeId, description, inputId, listId) {
   const list    = document.getElementById(listId);
   list.classList.remove('open');
 
-  let line1 = description, line2 = '';
+  const isAddrField = inputId.includes('addr1'); // Settings invoice fields — split into line1/line2
+  let fullAddress = description, line1 = description, line2 = '';
   try {
     const data = await apiFetch('/api/maps/place-details', 'POST', { placeId });
-    const comps = data.address_components || [];
-    const get = (...types) => comps.find(c => types.some(t => c.types.includes(t)))?.long_name || '';
+    fullAddress = data.formatted_address || description;
+    if (isAddrField && data.address_components?.length) {
+      const comps = data.address_components;
+      const get = (...types) => comps.find(c => types.some(t => c.types.includes(t)))?.long_name || '';
+      const streetNumber = get('street_number');
+      const route        = get('route');
+      const suburb       = get('sublocality_level_1', 'sublocality', 'neighborhood');
+      const city         = get('locality');
+      const postcode     = get('postal_code');
+      line1 = [streetNumber, route].filter(Boolean).join(' ') || fullAddress;
+      line2 = [suburb, [city, postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    }
+  } catch { /* fall back to description */ }
 
-    const streetNumber = get('street_number');
-    const route        = get('route');
-    const suburb       = get('sublocality_level_1', 'sublocality', 'neighborhood');
-    const city         = get('locality');
-    const postcode     = get('postal_code');
-
-    line1 = [streetNumber, route].filter(Boolean).join(' ') || data.formatted_address || description;
-    line2 = [suburb, [city, postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-  } catch { /* fall back to description in line1 */ }
-
-  // Populate addr1
-  inputEl.value = line1;
+  // Destination inputs get the full address (needed for Maps routing)
+  // Settings addr1 fields get the parsed street-only line
+  inputEl.value = isAddrField ? line1 : fullAddress;
   inputEl.dataset.verified = '1';
-  inputEl.dataset.detectedRegion = detectRegion(line2 || line1);
+  inputEl.dataset.detectedRegion = detectRegion(fullAddress);
 
-  // Populate addr2 if the field exists (inputId ends in "addr1" → swap for "addr2")
-  const addr2Id = inputId.replace('addr1', 'addr2');
-  if (addr2Id !== inputId) {
-    const addr2El = document.getElementById(addr2Id);
+  // Populate addr2 for Settings invoice fields
+  if (isAddrField) {
+    const addr2El = document.getElementById(inputId.replace('addr1', 'addr2'));
     if (addr2El && line2) addr2El.value = line2;
   }
 
