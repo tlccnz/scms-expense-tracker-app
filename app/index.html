@@ -1415,10 +1415,7 @@ async function calcDistance() {
   let totalKm = 0;
   for (let i = 0; i < dests.length - 1; i++) {
     try {
-      const data = await apiFetch('/api/maps/distance', {
-        method: 'POST',
-        body: JSON.stringify({ origins: [dests[i].address], destinations: [dests[i + 1].address] })
-      });
+      const data = await apiFetch('/api/maps/distance', 'POST', { origins: [dests[i].address], destinations: [dests[i + 1].address] });
       const el = data.rows?.[0]?.elements?.[0];
       if (el?.status !== 'OK') {
         setDistanceBar('error', '— km', '⚠️ No route found', '$—', true);
@@ -2089,10 +2086,7 @@ function onAddressInput(inputEl, listId) {
 async function fetchPlaceSuggestions(query, inputEl, listId) {
   const list = document.getElementById(listId);
   try {
-    const data = await apiFetch('/api/maps/places', {
-      method: 'POST',
-      body: JSON.stringify({ query })
-    });
+    const data = await apiFetch('/api/maps/places', 'POST', { query });
     const predictions = data.predictions || [];
     if (!predictions.length) {
       list.innerHTML = `<div class="autocomplete-spinner">No results found</div>`;
@@ -2121,10 +2115,7 @@ async function selectPlace(placeId, description, inputId, listId) {
 
   let addr = description;
   try {
-    const data = await apiFetch('/api/maps/place-details', {
-      method: 'POST',
-      body: JSON.stringify({ placeId })
-    });
+    const data = await apiFetch('/api/maps/place-details', 'POST', { placeId });
     if (data.formatted_address) addr = data.formatted_address;
   } catch { /* fall back to description */ }
 
