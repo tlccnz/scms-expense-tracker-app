@@ -158,3 +158,5 @@ invoiceDefaults: { incTime: true, incMileage: false, incExpenses: false }     //
 5. **Invoice tab - visible client selector** - Show scrollable chip row at top of Invoice tab showing all saved clients. Default client (isDefault: true) pre-selected on load. Tapping a chip switches the active client and updates the invoice preview immediately. If no clients configured, show a prompt linking to Settings -> Clients.
 
 6. **Address lookup via Maps API in Settings** - Address Line 1 fields in Settings -> Your Details and Settings -> Clients (both add and edit forms) use Places autocomplete. Selecting a suggestion auto-fills Line 1 and Line 2. Verified badge shown on selection. All calls routed through Worker proxy POST /api/maps/places (key never in browser).
+
+7. **Bug: Trip purpose shows [object Object]** - When adding a new purpose in Settings -> Purposes, the saved entry displays as "[object Object]" instead of the typed name. Likely a regression from the v3 purposes migration to objects ({text, usageCount}) — the addPurpose() function may be pushing a plain string while renderPurposes() expects an object, or vice versa.
