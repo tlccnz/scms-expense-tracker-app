@@ -801,8 +801,18 @@
         <div class="list-editor" id="destinations-list"></div>
         <div class="card" style="margin-top:8px">
           <div class="card-title">Add Destination</div>
-          <div class="field"><label>Name</label><input type="text" id="new-dest-name" placeholder="e.g. Home" /></div>
-          <div class="field"><label>Emoji Icon</label><input type="text" id="new-dest-icon" placeholder="🏠" maxlength="4" style="width:80px" /></div>
+          <div class="row">
+            <div class="field" style="flex:2"><label>Name</label><input type="text" id="new-dest-name" placeholder="e.g. Home" /></div>
+            <div class="field" style="flex:1"><label>Icon</label>
+              <select id="new-dest-icon">
+                <option value="">— None —</option>
+                <option value="🏢">🏢 Business</option>
+                <option value="☕">☕ Cafe</option>
+                <option value="🏠">🏠 Residence</option>
+                <option value="🏫">🏫 School</option>
+              </select>
+            </div>
+          </div>
           <div class="field">
             <label>Address</label>
             <div class="autocomplete-wrap" id="new-dest-wrap">
