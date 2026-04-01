@@ -1949,7 +1949,7 @@ function renderSettingsPage() {
   pl.innerHTML = config.purposes.length ? config.purposes.map((p, i) => `
     <div class="list-item">
       <div class="list-item-icon">🗂️</div>
-      <div class="list-item-name">${p}</div>
+      <div class="list-item-name">${typeof p === 'object' ? p.text : p}</div>
       <div class="list-item-actions">
         <button class="icon-btn" onclick="deletePurpose(${i})">🗑️</button>
       </div>
@@ -1987,7 +1987,7 @@ function addPurpose() {
   const inp = document.getElementById('new-purpose-input');
   const val = inp.value.trim();
   if (!val) return;
-  config.purposes.push(val);
+  config.purposes.push({ text: val, usageCount: 0 });
   saveConfig();
   populatePurposeSelect();
   renderSettingsPage();
