@@ -775,13 +775,17 @@
           <div class="field"><label>Bank Account</label><input type="text" id="setting-biz-bank" placeholder="12-3456-7890123-00" oninput="formatBankAccount(this)" /></div>
           <button class="btn btn-ghost" onclick="saveBusinessDetails()" style="margin-top:4px">Save Details</button>
         </div>
-        <div class="settings-section-title" style="margin-top:16px">Time Types &amp; Rates</div>
+        <div class="settings-section-title" style="margin-top:16px">Billing Types &amp; Rates</div>
         <div class="list-editor" id="time-types-list"></div>
         <div class="card" style="margin-top:8px">
           <div class="card-title">Add Time Type</div>
           <div class="row" style="align-items:flex-end">
             <div class="field" style="flex:2"><label>Name</label><input type="text" id="new-timetype-name" placeholder="e.g. Senior Tutor" /></div>
-            <div class="field" style="flex:1"><label>Rate ($/hr)</label><input type="number" id="new-timetype-rate" placeholder="0.00" min="0" step="0.01" /></div>
+            <div class="field" style="flex:1"><label><span id="new-timetype-rate-label">Rate ($/hr)</span></label><input type="number" id="new-timetype-rate" placeholder="0.00" min="0" step="0.01" /></div>
+            <div class="field" style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <label style="font-size:11px;margin-bottom:0">Fixed</label>
+              <input type="checkbox" id="new-timetype-fixed" onchange="updateTimetypeLabel()" style="width:20px;height:20px;margin:0;accent-color:var(--accent)" />
+            </div>
             <div class="field" style="flex:0 0 auto"><button class="btn btn-primary" onclick="addTimeType()" style="white-space:nowrap">Add</button></div>
           </div>
         </div>
@@ -1276,7 +1280,10 @@ function calcTimeEarnings(e) {
 }
 function calcTimeTotalHours(e) {
   if (!e.hours) return 0;
-  return Object.values(e.hours).reduce((s, h) => s + (h || 0), 0);
+  return Object.entries(e.hours).reduce((s, [typeId, h]) => {
+    const tt = config.timeTypes.find(t => t.id === typeId);
+    return s + (tt?.fixedPrice ? 0 : (h || 0));
+  }, 0);
 }
 // ═══════════════════════════════════════════════════════════
 //  TYPE TOGGLE
@@ -1628,8 +1635,9 @@ function renderTimeEntry(e) {
     const tt = config.timeTypes.find(t => t.id === typeId);
     const name = tt ? tt.name : typeId;
     const earn = hrs * (tt ? tt.rate : 0);
+    const hrsLabel = tt?.fixedPrice ? 'Fixed' : hrs.toFixed(2) + ' hrs';
     return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:3px">
-      <span>${name}</span><span style="font-family:var(--mono)">${hrs.toFixed(2)} hrs · ${fmt(earn)}</span>
+      <span>${name}</span><span style="font-family:var(--mono)">${hrsLabel} · ${fmt(earn)}</span>
     </div>`;
   }).join('');
   const period = e.periodStart && e.periodEnd
@@ -1691,7 +1699,11 @@ function editEntry(id) {
     renderTimeTypeRows();
     Object.entries(e.hours || {}).forEach(([typeId, hrs]) => {
       const inp = document.getElementById('hrs-' + typeId);
-      if (inp) inp.value = hrs;
+      if (inp) {
+        const tt = config.timeTypes.find(t => t.id === typeId);
+        if (tt?.fixedPrice) inp.checked = hrs > 0;
+        else inp.value = hrs;
+      }
     });
     updateTimeTotals();
   }
@@ -1948,7 +1960,7 @@ function renderSettingsPage() {
       <div class="list-item-icon">🕐</div>
       <div style="flex:1">
         <div class="list-item-name">${t.name}</div>
-        <div class="list-item-sub">${fmt(t.rate)}/hr</div>
+        <div class="list-item-sub">${t.fixedPrice ? fmt(t.rate)+' fixed' : fmt(t.rate)+'/hr'}</div>
       </div>
       <div class="list-item-actions" style="margin-left:8px">
         <button class="icon-btn" onclick="editTimeTypeRate(${i})">✏️</button>
@@ -2206,29 +2218,42 @@ function setTimePeriodDefaults() {
 function renderTimeTypeRows() {
   const container = document.getElementById('time-type-rows');
   if (!container) return;
-  container.innerHTML = (config.timeTypes || []).map(t => `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+  container.innerHTML = (config.timeTypes || []).map(t => {
+    const rateLabel = t.fixedPrice ? fmt(t.rate) + ' fixed' : fmt(t.rate) + '/hr';
+    const input = t.fixedPrice
+      ? `<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+           <input type="checkbox" id="hrs-${t.id}" onchange="updateTimeTotals()"
+             style="width:20px;height:20px;accent-color:var(--accent);flex-shrink:0" />
+           Include
+         </label>`
+      : `<div style="display:flex;align-items:center;gap:6px">
+           <input type="number" id="hrs-${t.id}" min="0" step="0.25" placeholder="0"
+             style="width:80px;font-size:16px;text-align:right;padding:10px 10px"
+             oninput="updateTimeTotals()" />
+           <span style="font-size:12px;color:var(--text3)">hrs</span>
+         </div>`;
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${t.name}</div>
-        <div style="font-size:11px;color:var(--text3)">${fmt(t.rate)}/hr</div>
+        <div style="font-size:11px;color:var(--text3)">${rateLabel}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="number" id="hrs-${t.id}" min="0" step="0.25" placeholder="0"
-          style="width:80px;font-size:16px;text-align:right;padding:10px 10px"
-          oninput="updateTimeTotals()" />
-        <span style="font-size:12px;color:var(--text3)">hrs</span>
-      </div>
-    </div>`).join('');
+      ${input}
+    </div>`;
+  }).join('');
   updateTimeTotals();
 }
 
+function getTypeHours(t) {
+  const inp = document.getElementById('hrs-' + t.id);
+  if (!inp) return 0;
+  return t.fixedPrice ? (inp.checked ? 1 : 0) : (parseFloat(inp.value) || 0);
+}
 function updateTimeTotals() {
   let totalHrs = 0, totalEarnings = 0;
   (config.timeTypes || []).forEach(t => {
-    const inp = document.getElementById('hrs-' + t.id);
-    const hrs = parseFloat(inp?.value || 0) || 0;
-    totalHrs += hrs;
-    totalEarnings += hrs * t.rate;
+    const val = getTypeHours(t);
+    if (!t.fixedPrice) totalHrs += val;
+    totalEarnings += val * t.rate;
   });
   document.getElementById('time-total-hours').textContent = totalHrs.toFixed(2) + ' hrs';
   document.getElementById('time-total-earnings').textContent = fmt(totalEarnings);
@@ -2244,10 +2269,10 @@ function saveTimeEntry() {
   let hasHours = false;
   (config.timeTypes || []).forEach(t => {
     const inp = document.getElementById('hrs-' + t.id);
-    const h = parseFloat(inp?.value || 0) || 0;
+    const h = getTypeHours(t);
     if (h > 0) { hours[t.id] = h; hasHours = true; }
   });
-  if (!hasHours) { showToast('Enter at least some hours', '⚠️'); return; }
+  if (!hasHours) { showToast('Enter hours or select a fixed item', '⚠️'); return; }
 
   const entry = {
     id: uid(), type: 'time',
@@ -2270,16 +2295,23 @@ function saveTimeEntry() {
 // ═══════════════════════════════════════════════════════════
 //  TIME TYPE SETTINGS
 // ═══════════════════════════════════════════════════════════
+function updateTimetypeLabel() {
+  const fixed = document.getElementById('new-timetype-fixed')?.checked;
+  const lbl = document.getElementById('new-timetype-rate-label');
+  if (lbl) lbl.textContent = fixed ? 'Fixed Amount ($)' : 'Rate ($/hr)';
+}
 function addTimeType() {
   const name = document.getElementById('new-timetype-name').value.trim();
   const rate = parseFloat(document.getElementById('new-timetype-rate').value) || 0;
   if (!name) { showToast('Enter a name', '⚠️'); return; }
   config.timeTypes = config.timeTypes || [];
-  config.timeTypes.push({ id: uid(), name, rate });
+  const fixedPrice = document.getElementById('new-timetype-fixed')?.checked || false;
+  config.timeTypes.push({ id: uid(), name, rate, fixedPrice });
   saveConfig();
   renderSettingsPage();
   document.getElementById('new-timetype-name').value = '';
   document.getElementById('new-timetype-rate').value = '';
+  const fixedCb = document.getElementById('new-timetype-fixed'); if (fixedCb) { fixedCb.checked = false; updateTimetypeLabel(); }
   showToast(name + ' added', '✓');
 }
 function deleteTimeType(i) {
@@ -2290,7 +2322,7 @@ function deleteTimeType(i) {
 }
 function editTimeTypeRate(i) {
   const t = config.timeTypes[i];
-  const newRate = prompt('Hourly rate for "' + t.name + '" ($):', t.rate);
+  const newRate = prompt((t.fixedPrice ? 'Fixed amount for "' : 'Hourly rate for "') + t.name + '" ($):', t.rate);
   if (newRate === null) return;
   const r = parseFloat(newRate);
   if (isNaN(r) || r < 0) { showToast('Invalid rate', '⚠️'); return; }
@@ -2476,7 +2508,9 @@ function buildInvoiceHTML(forPrint) {
         const rate = tt ? tt.rate : 0;
         const earn = hrs * rate;
         timeTotal += earn;
-        timeRowParts.push(`<tr><td>${name}</td><td style="text-align:center">${hrs.toFixed(2)}</td><td style="text-align:right">${tt ? fmt(rate)+'/hr' : 'N/A'}</td><td style="text-align:right">${fmt(earn)}</td></tr>`);
+        const qtyCell = tt?.fixedPrice ? '—' : hrs.toFixed(2);
+        const rateCell = tt?.fixedPrice ? 'Fixed' : (tt ? fmt(rate)+'/hr' : 'N/A');
+        timeRowParts.push(`<tr><td>${name}</td><td style="text-align:center">${qtyCell}</td><td style="text-align:right">${rateCell}</td><td style="text-align:right">${fmt(earn)}</td></tr>`);
       });
       timeRows = timeRowParts.join('');
     }

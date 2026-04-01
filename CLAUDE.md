@@ -173,6 +173,8 @@ invoiceDefaults: { incTime: true, incMileage: false, incExpenses: false }     //
 
 13. **[LOW] Invoice tab — label client chip row** - The scrollable client chip row has no heading. Add a small "Invoice To" label above or before the chips so the purpose is clear.
 
+19. **[LOW] Billing Types — fixed price support** - Rename "Time Types & Rates" → "Billing Types & Rates". Add a "Fixed Price" checkbox to the Add form. Fixed price types store `hours[typeId] = 1` (included) or absent (not included) — same data structure, earnings formula unchanged (1 × amount = $amount). Entry form: fixed types show a checkbox "Include" instead of hours input. History: shows "Fixed · $amount" not "X hrs · $amount". Invoice: fixed rows show `— | Fixed | $amount`; fixed types excluded from hours total. Settings list: shows "$X fixed" vs "$X/hr".
+
 18. **[LOW] Bug: non-NZ addresses rejected in autocomplete** - Worker's `handleMapsPlaces` has `components: 'country:nz'` hard-coded, blocking US and other international addresses. Fix: remove the country restriction entirely so any address worldwide can be found. Affects all autocomplete fields (destinations, Your Details, Clients).
 
 17. **[LOW] Invoice screen — Payment Options card** - Add a card on the Invoice tab below the include toggles. Two options: (1) "Bank Transfer" (default, pre-ticked) — pulls bank account number from Your Details and renders it in the existing green bank-box on the invoice; (2) "Custom instructions" — free-text field whose content appears below the bank box as a "Payment Instructions" section. If both are off, omit payment section from invoice entirely.
