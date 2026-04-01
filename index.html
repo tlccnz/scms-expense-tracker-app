@@ -2660,6 +2660,10 @@ function formatBankAccount(input) {
 
 // ── DATA MIGRATIONS ──
 function migrateConfig() {
+  // 0. Remove phantom blank client entries created by earlier migration bug
+  if (config.clients) {
+    config.clients = config.clients.filter(c => c.name && c.name.trim());
+  }
   // 1. Migrate string purposes to objects
   if (config.purposes && config.purposes.some(p => typeof p === 'string')) {
     config.purposes = config.purposes.map(p =>
@@ -2667,7 +2671,7 @@ function migrateConfig() {
     );
   }
   // 2. Migrate clientDetails to clients array
-  if (config.clientDetails && !(config.clients && config.clients.length)) {
+  if (config.clientDetails?.name && !(config.clients && config.clients.length)) {
     const cd = config.clientDetails;
     config.clients = [{
       id: uid(),
