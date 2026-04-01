@@ -195,7 +195,13 @@
     .filter-chip { flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); transition: all 0.15s; user-select: none; }
     .filter-chip.active { background: var(--accent-dim); border-color: rgba(0,122,255,0.4); color: var(--accent); }
     .entry-list { display: flex; flex-direction: column; gap: 8px; }
-    .entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; display: flex; gap: 10px; align-items: flex-start; position: relative; overflow: hidden; }
+    .entry { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px; display: flex; gap: 10px; align-items: flex-start; position: relative; overflow: hidden; cursor: pointer; }
+    /* Client chip row (invoice tab) */
+    .client-chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 0 10px; scrollbar-width: none; margin-bottom: 2px; }
+    .client-chip-row:empty { display: none; }
+    .client-chip-row::-webkit-scrollbar { display: none; }
+    .client-chip { flex-shrink: 0; padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); transition: all 0.15s; user-select: none; }
+    .client-chip.active { background: var(--accent-dim); border-color: rgba(0,122,255,0.4); color: var(--accent); }
     .entry::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
     .entry.mileage::before { background: var(--accent); }
     .entry.expense::before { background: var(--amber); }
@@ -639,10 +645,6 @@
         <button class="btn btn-ghost" onclick="downloadCSV()">⬇️ Download CSV</button>
       </div>
 
-      <div class="card" style="border-color:var(--red-dim)">
-        <div class="card-title" style="color:var(--red)">Danger Zone</div>
-        <button class="btn btn-danger" onclick="confirmClear()">🗑️ Clear All Data</button>
-      </div>
     </div>
 
 
@@ -650,6 +652,9 @@
          INVOICE PANEL
     ══════════════════════════════════════ -->
     <div class="panel" id="panel-invoice">
+
+      <!-- Client selector chips (V4) -->
+      <div class="client-chip-row" id="inv-client-chips"></div>
 
       <div class="period-row" id="inv-period-row">
         <div class="period-btn active" onclick="setInvPeriod(this,'month')">Month</div>
@@ -757,7 +762,13 @@
         <div class="settings-section-title">Your Details</div>
         <div class="card">
           <div class="field"><label>Your Name / Business Name</label><input type="text" id="setting-biz-name" placeholder="Jane Smith" /></div>
-          <div class="field"><label>Address Line 1</label><input type="text" id="setting-biz-addr1" placeholder="123 Main St" /></div>
+          <div class="field"><label>Address Line 1</label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="setting-biz-addr1" placeholder="123 Main St" autocomplete="off" oninput="onAddressInput(this,'biz-addr1-ac')" onblur="delayHide('biz-addr1-ac')" />
+              <div class="autocomplete-list" id="biz-addr1-ac"></div>
+            </div>
+            <div id="biz-addr1-verified" style="min-height:16px;font-size:12px;margin-top:3px"></div>
+          </div>
           <div class="field"><label>Address Line 2</label><input type="text" id="setting-biz-addr2" placeholder="Auckland 1010" /></div>
           <div class="field"><label>Phone</label><input type="text" id="setting-biz-phone" placeholder="+64 21 123 4567" /></div>
           <div class="field"><label>Email</label><input type="email" id="setting-biz-email" placeholder="jane@example.com" /></div>
@@ -823,7 +834,13 @@
           <div class="card-title">Add / Edit Client</div>
           <input type="hidden" id="edit-client-id" />
           <div class="field"><label>Client Name / Organisation</label><input type="text" id="setting-client-name" placeholder="ABC Company Ltd" /></div>
-          <div class="field"><label>Address Line 1</label><input type="text" id="setting-client-addr1" placeholder="456 Business Ave" /></div>
+          <div class="field"><label>Address Line 1</label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="setting-client-addr1" placeholder="456 Business Ave" autocomplete="off" oninput="onAddressInput(this,'client-addr1-ac')" onblur="delayHide('client-addr1-ac')" />
+              <div class="autocomplete-list" id="client-addr1-ac"></div>
+            </div>
+            <div id="client-addr1-verified" style="min-height:16px;font-size:12px;margin-top:3px"></div>
+          </div>
           <div class="field"><label>Address Line 2</label><input type="text" id="setting-client-addr2" placeholder="Wellington 6011" /></div>
           <div class="field"><label>Phone</label><input type="text" id="setting-client-phone" placeholder="+64 4 123 4567" /></div>
           <div class="field"><label>Client Email</label><input type="email" id="setting-client-email" placeholder="accounts@client.com" /></div>
@@ -862,20 +879,7 @@
       <div id="settings-sub-advanced" style="display:none">
         <button class="btn btn-ghost btn-sm" onclick="showSettingsHome()" style="margin-bottom:12px;width:auto">← Back</button>
         <div class="settings-section-title">Advanced</div>
-        <div id="api-key-notice" class="api-notice" style="display:none">
-          <strong>⚠️ API key required</strong>
-          Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> — enable the <em>Distance Matrix API</em> and <em>Places API</em>. Paste it below.
-        </div>
-        <div class="card">
-          <div class="field">
-            <label>Google Maps API Key</label>
-            <input type="password" id="setting-apikey" placeholder="AIza…" autocomplete="off" />
-          </div>
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-primary" style="flex:1" onclick="saveApiKey()">Save Key</button>
-            <button class="btn btn-ghost btn-sm" onclick="testApiKey()">Test</button>
-          </div>
-        </div>
+
         <div class="card" style="margin-top:8px;border-color:var(--red-dim)">
           <div class="card-title" style="color:var(--red)">Danger Zone</div>
           <button class="btn btn-danger" onclick="confirmClear()">🗑️ Delete All Data</button>
@@ -935,7 +939,6 @@ const WORKER_URL = 'https://myte-log-api.mason-kevinc.workers.dev';
 //  DEFAULT CONFIG
 // ═══════════════════════════════════════════════════════════
 const DEFAULT_CONFIG = {
-  apiKey: '',
   ratePerKm: 1.17,
   purposes: [
     'Client visit','Office commute','Airport transfer',
@@ -967,6 +970,7 @@ let receipts = JSON.parse(localStorage.getItem('et_receipts') || '{}');
 // Auth
 let authToken  = localStorage.getItem('te_token') || null;
 let authUser   = JSON.parse(localStorage.getItem('te_user') || 'null');
+let activeInvClientId = null; // V4: selected client on invoice tab
 let syncTimer  = null;
 let pendingSync = false;
 
@@ -1058,8 +1062,6 @@ async function initApp() {
   document.getElementById('export-email').addEventListener('input', setExportPreview);
   document.getElementById('export-label').addEventListener('input', setExportPreview);
 
-  checkApiKeyNotice();
-  if (config.apiKey) loadMapsSDK(config.apiKey);
   setTimePeriodDefaults();
   renderTimeTypeRows();
 
@@ -1264,11 +1266,6 @@ function calcTimeTotalHours(e) {
   if (!e.hours) return 0;
   return Object.values(e.hours).reduce((s, h) => s + (h || 0), 0);
 }
-function checkApiKeyNotice() {
-  const notice = document.getElementById('api-key-notice');
-  if (notice) notice.style.display = config.apiKey ? 'none' : 'block';
-}
-
 // ═══════════════════════════════════════════════════════════
 //  TYPE TOGGLE
 // ═══════════════════════════════════════════════════════════
@@ -1404,16 +1401,7 @@ function setDistanceBar(state, distText, statusText, reimbText, dim) {
   st.textContent = statusText || '';
 }
 
-function calcDistance() {
-  if (!config.apiKey) {
-    setDistanceBar('error', '— km', '⚠️ No API key — add one in Settings', '$—', true);
-    return;
-  }
-  if (!window.google?.maps) {
-    setDistanceBar('error', '— km', '⚠️ Maps not loaded yet — try again', '$—', true);
-    return;
-  }
-
+async function calcDistance() {
   const dests = tripStops.map(id => config.destinations.find(d => d.id === id));
   const missing = dests.find(d => !d?.address?.trim());
   if (missing) {
@@ -1421,39 +1409,31 @@ function calcDistance() {
     return;
   }
 
-  // Chain legs sequentially using the SDK's DistanceMatrixService
-  const service = new google.maps.DistanceMatrixService();
-  let totalKm = 0; // each leg rounded up to next whole km
-  let legIdx = 0;
+  setDistanceBar('calculating', '…', 'Calculating distance…', '…', false);
 
-  function nextLeg() {
-    if (legIdx >= dests.length - 1) {
-      currentDistKm = totalKm;
-      const reimb = currentDistKm * config.ratePerKm;
-      setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
-      return;
-    }
-    service.getDistanceMatrix({
-      origins: [dests[legIdx].address],
-      destinations: [dests[legIdx + 1].address],
-      travelMode: google.maps.TravelMode.DRIVING,
-      unitSystem: google.maps.UnitSystem.METRIC
-    }, (res, status) => {
-      if (status !== 'OK') {
-        setDistanceBar('error', '— km', `⚠️ API error: ${status}`, '$—', true);
-        currentDistKm = 0; return;
-      }
-      const el = res.rows[0]?.elements[0];
+  // Chain legs sequentially via Worker proxy
+  let totalKm = 0;
+  for (let i = 0; i < dests.length - 1; i++) {
+    try {
+      const data = await apiFetch('/api/maps/distance', {
+        method: 'POST',
+        body: JSON.stringify({ origins: [dests[i].address], destinations: [dests[i + 1].address] })
+      });
+      const el = data.rows?.[0]?.elements?.[0];
       if (el?.status !== 'OK') {
-        setDistanceBar('error', '— km', `⚠️ No route found`, '$—', true);
+        setDistanceBar('error', '— km', '⚠️ No route found', '$—', true);
         currentDistKm = 0; return;
       }
-      totalKm += Math.ceil(el.distance.value / 1000); // round up per leg
-      legIdx++;
-      nextLeg();
-    });
+      totalKm += Math.ceil(el.distance.value / 1000);
+    } catch (e) {
+      setDistanceBar('error', '— km', `⚠️ ${e.message || 'Maps error'}`, '$—', true);
+      currentDistKm = 0; return;
+    }
   }
-  nextLeg();
+
+  currentDistKm = totalKm;
+  const reimb = currentDistKm * config.ratePerKm;
+  setDistanceBar('ready', fmtKm(currentDistKm), `${dests.length} stops · ${fmt(config.ratePerKm)}/km`, fmt(reimb), false);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1598,7 +1578,7 @@ function formatDateLabel(ds) {
 function renderEntry(e) {
   if (e.type === 'time') return renderTimeEntry(e);
   if (e.type === 'mileage') {
-    return `<div class="entry mileage">
+    return `<div class="entry mileage" onclick="editEntry('${e.id}')">
       <div class="entry-icon">🚗</div>
       <div class="entry-body">
         <div class="entry-top">
@@ -1608,13 +1588,13 @@ function renderEntry(e) {
         <div class="entry-route">${e.route || ''}</div>
         <div class="entry-meta">${fmt(e.reimbursement)} reimbursement · @${fmt(e.rateUsed||config.ratePerKm)}/km</div>
         ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
-        <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+        <div class="entry-actions"><button class="del-btn" onclick="event.stopPropagation();deleteEntry('${e.id}')">🗑️ Delete</button></div>
       </div>
     </div>`;
   }
   const catIcons = { Meals:'🍽️', Parking:'🅿️', Fuel:'⛽', Hotel:'🏨', Supplies:'📦', Other:'📎' };
   const hasR = e.receiptIds?.length > 0;
-  return `<div class="entry expense">
+  return `<div class="entry expense" onclick="editEntry('${e.id}')">
     <div class="entry-icon">${catIcons[e.category]||'💳'}</div>
     <div class="entry-body">
       <div class="entry-top">
@@ -1625,8 +1605,8 @@ function renderEntry(e) {
       ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
       ${hasR ? `<div class="entry-receipt-badge">📷 ${e.receiptIds.length} receipt${e.receiptIds.length>1?'s':''}</div>` : ''}
       <div class="entry-actions">
-        ${hasR ? `<button class="del-btn" onclick="viewReceipts('${e.id}')">🔍 View</button>` : ''}
-        <button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button>
+        ${hasR ? `<button class="del-btn" onclick="event.stopPropagation();viewReceipts('${e.id}')">🔍 View</button>` : ''}
+        <button class="del-btn" onclick="event.stopPropagation();deleteEntry('${e.id}')">🗑️ Delete</button>
       </div>
     </div>
   </div>`;
@@ -1646,7 +1626,7 @@ function renderTimeEntry(e) {
   const period = e.periodStart && e.periodEnd
     ? `${formatDateLabel(e.periodStart)} – ${formatDateLabel(e.periodEnd)}`
     : e.periodStart || '';
-  return `<div class="entry" style="border-left:3px solid var(--purple)">
+  return `<div class="entry" style="border-left:3px solid var(--purple);cursor:pointer" onclick="editEntry('${e.id}')">
     <div class="entry-icon">🕐</div>
     <div class="entry-body">
       <div class="entry-top">
@@ -1659,7 +1639,7 @@ function renderTimeEntry(e) {
         <span style="font-family:var(--mono);color:var(--green);font-weight:700">${fmt(totalEarnings)}</span>
       </div>
       ${e.notes ? `<div class="entry-note">${e.notes}</div>` : ''}
-      <div class="entry-actions"><button class="del-btn" onclick="deleteEntry('${e.id}')">🗑️ Delete</button></div>
+      <div class="entry-actions"><button class="del-btn" onclick="event.stopPropagation();deleteEntry('${e.id}')">🗑️ Delete</button></div>
     </div>
   </div>`;
 }
@@ -1907,11 +1887,8 @@ function renderSettingsPage() {
   // Run migrations first
   migrateConfig();
 
-  const apikeyEl = document.getElementById('setting-apikey');
   const rateEl   = document.getElementById('setting-rate');
-  if (apikeyEl) apikeyEl.value = config.apiKey || '';
   if (rateEl)   rateEl.value   = config.ratePerKm;
-  checkApiKeyNotice();
 
   // Business details
   const biz = config.bizDetails || {};
@@ -1997,52 +1974,6 @@ function renderSettingsPage() {
         <button class="icon-btn" onclick="deleteDest(${i})">🗑️</button>
       </div>
     </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No destinations yet</div></div>';
-}
-
-// API key — loads the Maps JS SDK when saved
-function saveApiKey() {
-  const key = document.getElementById('setting-apikey').value.trim();
-  config.apiKey = key;
-  saveConfig();
-  checkApiKeyNotice();
-  if (key) loadMapsSDK(key);
-  showToast('API key saved', '🔑');
-}
-
-function testApiKey() {
-  const key = document.getElementById('setting-apikey').value.trim();
-  if (!key) { showToast('Enter a key first', '⚠️'); return; }
-  if (!window.google?.maps) {
-    showToast('Loading Maps SDK…', '⏳');
-    loadMapsSDK(key, () => testApiKey());
-    return;
-  }
-  showToast('Testing…', '⏳');
-  // Quick geocode test using the SDK's Geocoder (no CORS issues)
-  const geocoder = new google.maps.Geocoder();
-  geocoder.geocode({ address: 'Auckland, New Zealand' }, (results, status) => {
-    if (status === 'OK') showToast('API key works! ✓', '✅');
-    else showToast('Key error: ' + status, '❌');
-  });
-}
-
-// Dynamically inject the Maps JS SDK <script> tag
-function loadMapsSDK(key, callback) {
-  // Remove any existing Maps script so we can reload with new key
-  const existing = document.getElementById('gmaps-sdk');
-  if (existing) existing.remove();
-  if (window.google?.maps) delete window.google.maps;
-
-  window._mapsCallback = function() {
-    if (callback) callback();
-  };
-
-  const s = document.createElement('script');
-  s.id  = 'gmaps-sdk';
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=_mapsCallback`;
-  s.async = true;
-  s.onerror = () => showToast('Failed to load Maps SDK — check API key', '❌');
-  document.head.appendChild(s);
 }
 
 // Rate
@@ -2139,13 +2070,6 @@ function saveEditedAddress() {
 //  GOOGLE PLACES AUTOCOMPLETE — Maps JS SDK (no CORS issues)
 // ═══════════════════════════════════════════════════════════
 let acTimer = null;
-let acSessionToken = null;
-
-function getAcToken() {
-  if (!acSessionToken && window.google?.maps?.places)
-    acSessionToken = new google.maps.places.AutocompleteSessionToken();
-  return acSessionToken;
-}
 
 function onAddressInput(inputEl, listId) {
   delete inputEl.dataset.verified;
@@ -2162,30 +2086,16 @@ function onAddressInput(inputEl, listId) {
   acTimer = setTimeout(() => fetchPlaceSuggestions(query, inputEl, listId), 350);
 }
 
-function fetchPlaceSuggestions(query, inputEl, listId) {
+async function fetchPlaceSuggestions(query, inputEl, listId) {
   const list = document.getElementById(listId);
-
-  if (!config.apiKey) {
-    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Save your API key in Settings first</div>`;
-    return;
-  }
-  if (!window.google?.maps?.places) {
-    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--amber)">⚠️ Maps not loaded yet — save your API key first</div>`;
-    return;
-  }
-
-  const svc = new google.maps.places.AutocompleteService();
-  svc.getPlacePredictions({
-    input: query,
-    sessionToken: getAcToken(),
-    componentRestrictions: { country: 'nz' }
-  }, (predictions, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS || !predictions?.length) {
+  try {
+    const data = await apiFetch('/api/maps/places', {
+      method: 'POST',
+      body: JSON.stringify({ query })
+    });
+    const predictions = data.predictions || [];
+    if (!predictions.length) {
       list.innerHTML = `<div class="autocomplete-spinner">No results found</div>`;
-      return;
-    }
-    if (status !== google.maps.places.PlacesServiceStatus.OK) {
-      list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ Places error: ${status}</div>`;
       return;
     }
     list.innerHTML = predictions.map(p => {
@@ -2199,40 +2109,31 @@ function fetchPlaceSuggestions(query, inputEl, listId) {
       </div>`;
     }).join('');
     list.classList.add('open');
-  });
+  } catch (e) {
+    list.innerHTML = `<div class="autocomplete-spinner" style="color:var(--red)">❌ ${e.message || 'Maps error'}</div>`;
+  }
 }
 
-function selectPlace(placeId, description, inputId, listId) {
+async function selectPlace(placeId, description, inputId, listId) {
   const inputEl = document.getElementById(inputId);
   const list    = document.getElementById(listId);
   list.classList.remove('open');
 
-  if (!window.google?.maps?.places) {
-    inputEl.value = description;
-    inputEl.dataset.verified = '1';
-    return;
-  }
+  let addr = description;
+  try {
+    const data = await apiFetch('/api/maps/place-details', {
+      method: 'POST',
+      body: JSON.stringify({ placeId })
+    });
+    if (data.formatted_address) addr = data.formatted_address;
+  } catch { /* fall back to description */ }
 
-  // Use a throw-away div as the PlacesService anchor (required by SDK)
-  const dummy = document.createElement('div');
-  const svc   = new google.maps.places.PlacesService(dummy);
-  svc.getDetails({
-    placeId,
-    fields: ['formatted_address'],
-    sessionToken: acSessionToken
-  }, (place, status) => {
-    const addr = (status === google.maps.places.PlacesServiceStatus.OK && place?.formatted_address)
-      ? place.formatted_address
-      : description;
+  inputEl.value = addr;
+  inputEl.dataset.verified = '1';
+  inputEl.dataset.detectedRegion = detectRegion(addr);
 
-    inputEl.value = addr;
-    inputEl.dataset.verified = '1';
-    inputEl.dataset.detectedRegion = detectRegion(addr);
-    acSessionToken = null; // session complete — reset token
-
-    const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
-    if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
-  });
+  const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
+  if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
 }
 
 function detectRegion(address) {
@@ -2461,6 +2362,26 @@ function invPeriodEntries() {
   });
 }
 
+function renderInvClientChips() {
+  const el = document.getElementById('inv-client-chips');
+  if (!el) return;
+  const clients = config.clients || [];
+  if (!clients.length) { el.innerHTML = ''; return; }
+  // Ensure activeInvClientId is set to the default client on first render
+  if (!activeInvClientId || !clients.find(c => c.id === activeInvClientId)) {
+    const def = clients.find(c => c.isDefault) || clients[0];
+    activeInvClientId = def?.id || null;
+  }
+  el.innerHTML = clients.map(c =>
+    `<div class="client-chip${c.id === activeInvClientId ? ' active' : ''}" onclick="setInvClient('${c.id}')">${c.name}</div>`
+  ).join('');
+}
+
+function setInvClient(id) {
+  activeInvClientId = id;
+  renderInvClientChips();
+}
+
 function updateInvoicePanel() {
   // Apply invoice defaults from config (once per session, when panel first opens)
   const defaults = config.invoiceDefaults || { incTime: true, incMileage: false, incExpenses: false };
@@ -2493,6 +2414,8 @@ function updateInvoicePanel() {
   if (!invDate.value) invDate.value = new Date().toISOString().split('T')[0];
   const invLabel = document.getElementById('inv-period-label');
   if (!invLabel.value) invLabel.value = new Date().toLocaleDateString('en-NZ', { month: 'long', year: 'numeric' });
+
+  renderInvClientChips();
 }
 
 function buildInvoiceHTML(forPrint) {
@@ -2504,9 +2427,10 @@ function buildInvoiceHTML(forPrint) {
   const invDate     = document.getElementById('inv-date').value;
   const invLabel    = document.getElementById('inv-period-label').value;
   const biz = config.bizDetails || {};
-  // Use first default client or first client
+  // Use the actively selected client chip, or fall back to default
   const clients = config.clients || [];
-  const cli = clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
+  const cli = (activeInvClientId && clients.find(c => c.id === activeInvClientId))
+    || clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
 
   let timeRows = '', mileRows = '', expRows = '';
   let timeTotal = 0, mileTotal = 0, expTotal = 0;
@@ -2676,7 +2600,8 @@ async function emailInvoice() {
   const subject = `Invoice ${invNum} — ${invLabel}`;
   const body = `Please find attached invoice ${invNum} for ${invLabel}.\n\nTotal: ${document.getElementById('inv-total').textContent}\n\nPlease view the full invoice at: [paste invoice link here]`;
   const clients = config.clients || [];
-  const cli = clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
+  const cli = (activeInvClientId && clients.find(c => c.id === activeInvClientId))
+    || clients.find(c => c.isDefault) || clients[0] || config.clientDetails || {};
 
   if (navigator.share) {
     try { await navigator.share({ title: subject, text: body }); return; } catch(e) { if (e.name === 'AbortError') return; }
