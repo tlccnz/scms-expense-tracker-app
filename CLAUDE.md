@@ -173,6 +173,8 @@ invoiceDefaults: { incTime: true, incMileage: false, incExpenses: false }     //
 
 13. **[LOW] Invoice tab — label client chip row** - The scrollable client chip row has no heading. Add a small "Invoice To" label above or before the chips so the purpose is clear.
 
+18. **[LOW] Bug: non-NZ addresses rejected in autocomplete** - Worker's `handleMapsPlaces` has `components: 'country:nz'` hard-coded, blocking US and other international addresses. Fix: remove the country restriction entirely so any address worldwide can be found. Affects all autocomplete fields (destinations, Your Details, Clients).
+
 17. **[LOW] Invoice screen — Payment Options card** - Add a card on the Invoice tab below the include toggles. Two options: (1) "Bank Transfer" (default, pre-ticked) — pulls bank account number from Your Details and renders it in the existing green bank-box on the invoice; (2) "Custom instructions" — free-text field whose content appears below the bank box as a "Payment Instructions" section. If both are off, omit payment section from invoice entirely.
 
 16. **[HIGH] Bug: editing history entry creates duplicate instead of updating** - `editEntry(id)` sets `editingEntryId` and navigates to the Add tab, but `saveMileage()`, `saveExpense()`, and `saveTime()` never check `editingEntryId` — they always call `uid()` and push a new entry. Fix: in each save function, if `editingEntryId` is set, replace the existing entry in-place (find by id, splice/replace) and preserve its original `createdAt`. Clear `editingEntryId` and hide the edit banner after save.
