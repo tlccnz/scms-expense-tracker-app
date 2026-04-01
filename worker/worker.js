@@ -253,7 +253,7 @@ async function handleMapsPlaceDetails(request, env) {
 
   const params = new URLSearchParams({
     place_id: placeId,
-    fields:   'formatted_address',
+    fields:   'formatted_address,address_components',
     key:      env.GOOGLE_MAPS_KEY,
     language: 'en',
   });
@@ -261,7 +261,10 @@ async function handleMapsPlaceDetails(request, env) {
   const data = await res.json();
 
   if (data.status !== 'OK') return err(`Maps error: ${data.status}`, 502);
-  return json({ formatted_address: data.result?.formatted_address || '' });
+  return json({
+    formatted_address:  data.result?.formatted_address  || '',
+    address_components: data.result?.address_components || [],
+  });
 }
 
 async function handleMapsDistance(request, env) {

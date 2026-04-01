@@ -2113,15 +2113,33 @@ async function selectPlace(placeId, description, inputId, listId) {
   const list    = document.getElementById(listId);
   list.classList.remove('open');
 
-  let addr = description;
+  let line1 = description, line2 = '';
   try {
     const data = await apiFetch('/api/maps/place-details', 'POST', { placeId });
-    if (data.formatted_address) addr = data.formatted_address;
-  } catch { /* fall back to description */ }
+    const comps = data.address_components || [];
+    const get = (...types) => comps.find(c => types.some(t => c.types.includes(t)))?.long_name || '';
 
-  inputEl.value = addr;
+    const streetNumber = get('street_number');
+    const route        = get('route');
+    const suburb       = get('sublocality_level_1', 'sublocality', 'neighborhood');
+    const city         = get('locality');
+    const postcode     = get('postal_code');
+
+    line1 = [streetNumber, route].filter(Boolean).join(' ') || data.formatted_address || description;
+    line2 = [suburb, [city, postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  } catch { /* fall back to description in line1 */ }
+
+  // Populate addr1
+  inputEl.value = line1;
   inputEl.dataset.verified = '1';
-  inputEl.dataset.detectedRegion = detectRegion(addr);
+  inputEl.dataset.detectedRegion = detectRegion(line2 || line1);
+
+  // Populate addr2 if the field exists (inputId ends in "addr1" → swap for "addr2")
+  const addr2Id = inputId.replace('addr1', 'addr2');
+  if (addr2Id !== inputId) {
+    const addr2El = document.getElementById(addr2Id);
+    if (addr2El && line2) addr2El.value = line2;
+  }
 
   const verifiedEl = inputEl.closest('.field')?.querySelector('[id$="-verified"]');
   if (verifiedEl) verifiedEl.innerHTML = `<span class="ac-verified">✓ Verified address</span>`;
