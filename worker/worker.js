@@ -223,7 +223,6 @@ async function handleMapsPlaces(request, env) {
   const params = new URLSearchParams({
     input: query,
     key: env.GOOGLE_MAPS_KEY,
-    components: 'country:nz',
     language: 'en',
   });
   const res  = await fetch(`${MAPS_BASE}/place/autocomplete/json?${params}`);

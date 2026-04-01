@@ -653,8 +653,11 @@
     ══════════════════════════════════════ -->
     <div class="panel" id="panel-invoice">
 
-      <!-- Client selector chips (V4) -->
-      <div class="client-chip-row" id="inv-client-chips"></div>
+      <!-- Client selector (V4) -->
+      <div id="inv-client-wrap" style="display:none">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:6px;padding:0 2px">Invoice To</div>
+        <div class="client-chip-row" id="inv-client-chips"></div>
+      </div>
 
       <div class="period-row" id="inv-period-row">
         <div class="period-btn active" onclick="setInvPeriod(this,'month')">Month</div>
@@ -703,6 +706,24 @@
           <div class="inv-toggle-row" id="toggle-expenses" onclick="toggleInvInclude('expenses')" data-on="true">
             <div class="inv-toggle-dot"></div>
             <span>💳 Expenses</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Payment Options</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="inv-toggle-row" id="inv-pay-bank" onclick="toggleInvPay(this)" data-on="true">
+            <div class="inv-toggle-dot"></div>
+            <span>💳 Bank Transfer (show account number)</span>
+          </div>
+          <div>
+            <div class="inv-toggle-row" id="inv-pay-custom" onclick="toggleInvPay(this)" data-on="false">
+              <div class="inv-toggle-dot"></div>
+              <span>📝 Custom payment instructions</span>
+            </div>
+            <textarea id="inv-pay-custom-text" placeholder="e.g. Payment via Stripe…" rows="2"
+              style="display:none;width:100%;margin-top:6px;font-size:13px;border:1.5px solid var(--border);border-radius:10px;padding:10px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
           </div>
         </div>
       </div>
@@ -898,7 +919,10 @@
 
         <div class="card" style="margin-top:8px;border-color:var(--red-dim)">
           <div class="card-title" style="color:var(--red)">Danger Zone</div>
-          <button class="btn btn-danger" onclick="confirmClear()">🗑️ Delete All Data</button>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn" style="background:var(--surface);color:var(--red);border:1.5px solid var(--red)" onclick="confirmClearTransactions()">🧹 Clear Transactions</button>
+            <button class="btn btn-danger" onclick="confirmResetEverything()">🗑️ Reset Everything</button>
+          </div>
         </div>
       </div>
 
@@ -910,24 +934,62 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- CONFIRM MODAL -->
+<!-- CLEAR TRANSACTIONS MODAL -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">⚠️ Clear all data?</div>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6">This permanently deletes all entries. Cannot be undone.</p>
+    <div class="modal-title">🧹 Clear Transactions?</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6">Deletes all entries and receipt photos. Your settings, destinations, clients and rates are kept. Cannot be undone.</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('confirm-modal')">Cancel</button>
-      <button class="btn btn-danger" style="flex:1" onclick="clearAllData()">Delete all</button>
+      <button class="btn btn-danger" style="flex:1" onclick="clearTransactions()">Clear</button>
     </div>
   </div>
 </div>
 
-<!-- EDIT ADDRESS MODAL -->
+<!-- RESET EVERYTHING MODAL -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🗑️ Reset Everything?</div>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:20px;line-height:1.6">Permanently deletes all entries, receipts, settings, destinations, clients and rates. Returns the app to factory state. Cannot be undone.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('reset-modal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="resetEverything()">Reset Everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT DESTINATION MODAL -->
 <div class="modal-overlay" id="edit-addr-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="edit-addr-title">Edit Address</div>
+    <div class="modal-title">Edit Destination</div>
+    <div class="row" style="gap:10px;margin-bottom:12px">
+      <div class="field" style="flex:1">
+        <label>Name</label>
+        <input type="text" id="edit-dest-name" placeholder="e.g. Home" />
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <label>Icon</label>
+        <select id="edit-dest-icon" style="font-size:20px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface)">
+          <option value="">—</option>
+          <option value="✈️">✈️ Airport</option>
+          <option value="🏦">🏦 Bank</option>
+          <option value="☕">☕ Café</option>
+          <option value="🏢">🏢 Business</option>
+          <option value="🏥">🏥 Hospital</option>
+          <option value="🏠">🏠 Home</option>
+          <option value="🏨">🏨 Hotel</option>
+          <option value="🏛️">🏛️ Government</option>
+          <option value="🤝">🤝 Meeting</option>
+          <option value="📦">📦 Depot</option>
+          <option value="🏫">🏫 School</option>
+          <option value="🏪">🏪 Shop</option>
+          <option value="⛽">⛽ Petrol</option>
+        </select>
+      </div>
+    </div>
     <div class="field">
       <label>Address</label>
       <div class="autocomplete-wrap">
@@ -1467,20 +1529,28 @@ function saveMileage() {
     .map(id => config.destinations.find(d => d.id === id)?.name || '?')
     .join(' → ');
 
+  const isEdit   = !!editingEntryId;
+  const existing = isEdit ? entries.find(x => x.id === editingEntryId) : null;
   const entry = {
-    id: uid(), type: 'mileage', date, purpose,
+    id: isEdit ? editingEntryId : uid(), type: 'mileage', date, purpose,
     stopIds: [...tripStops], route: stopNames,
     km: currentDistKm,
     reimbursement: currentDistKm * config.ratePerKm,
     rateUsed: config.ratePerKm,
     notes: document.getElementById('mile-notes').value.trim(),
-    createdAt: Date.now()
+    createdAt: existing ? existing.createdAt : Date.now()
   };
-  entries.unshift(entry);
+  if (isEdit) {
+    const idx = entries.findIndex(x => x.id === editingEntryId);
+    if (idx > -1) entries[idx] = entry; else entries.unshift(entry);
+    editingEntryId = null;
+    document.getElementById('edit-banner').classList.remove('show');
+  } else {
+    entries.unshift(entry);
+  }
   save();
-  showToast(`${fmtKm(currentDistKm)} trip saved!`, '🚗');
+  showToast(`${fmtKm(currentDistKm)} trip ${isEdit ? 'updated' : 'saved'}!`, '🚗');
 
-  // Increment purpose usage count
   migrateAndIncrementPurpose(purpose);
 
   // Reset
@@ -1540,18 +1610,26 @@ function saveExpense() {
   if (!amount || amount <= 0) { showToast('Please enter an amount', '⚠️'); return; }
   if (!desc)          { showToast('Please enter a description', '⚠️'); return; }
 
-  const id = uid();
+  const isEdit   = !!editingEntryId;
+  const existing = isEdit ? entries.find(x => x.id === editingEntryId) : null;
   const entry = {
-    id, type: 'expense', date, amount, description: desc,
+    id: isEdit ? editingEntryId : uid(), type: 'expense', date, amount, description: desc,
     category: selectedCat,
     notes: document.getElementById('exp-notes').value.trim(),
     receiptIds: pendingReceipts.map(r => r.id),
-    createdAt: Date.now()
+    createdAt: existing ? existing.createdAt : Date.now()
   };
   pendingReceipts.forEach(r => { receipts[r.id] = r.dataUrl; });
-  entries.unshift(entry);
+  if (isEdit) {
+    const idx = entries.findIndex(x => x.id === editingEntryId);
+    if (idx > -1) entries[idx] = entry; else entries.unshift(entry);
+    editingEntryId = null;
+    document.getElementById('edit-banner').classList.remove('show');
+  } else {
+    entries.unshift(entry);
+  }
   save();
-  showToast(`${fmt(amount)} expense saved!`, '💳');
+  showToast(`${fmt(amount)} expense ${isEdit ? 'updated' : 'saved'}!`, '💳');
 
   document.getElementById('exp-amount').value = '';
   document.getElementById('exp-description').value = '';
@@ -1935,10 +2013,11 @@ function renderSettingsPage() {
         <div class="list-item-icon">🏢</div>
         <div style="flex:1;min-width:0">
           <div class="list-item-name">${c.name || 'Unnamed'}</div>
-          <div class="list-item-sub">${c.email || ''}${c.isDefault ? ' \u2022 Default' : ''}</div>
+          <div class="list-item-sub">${c.isDefault ? '★ Default' : (c.email || '')}</div>
         </div>
-        <div class="list-item-actions">
-          <button class="icon-btn" onclick="editClientEntry(${i})">\u270f\ufe0f</button>
+        <div class="list-item-actions" style="flex-wrap:wrap;gap:4px">
+          ${!c.isDefault ? `<button class="icon-btn" style="font-size:11px;padding:4px 8px" onclick="setClientDefault(${i})">Set Default</button>` : ''}
+          <button class="icon-btn" onclick="editClientEntry(${i})">✏️</button>
           <button class="icon-btn" onclick="deleteClientEntry(${i})">🗑️</button>
         </div>
       </div>`).join('') : '<div class="list-item"><div style="color:var(--text3);font-size:13px">No clients yet</div></div>';
@@ -2062,7 +2141,8 @@ let editingEntryId = null;
 function editDestAddress(i) {
   editingDestIdx = i;
   const d = config.destinations[i];
-  document.getElementById('edit-addr-title').textContent = `📍 Edit address — ${d.name}`;
+  document.getElementById('edit-dest-name').value = d.name || '';
+  document.getElementById('edit-dest-icon').value = d.icon || '';
   const inp = document.getElementById('edit-addr-input');
   inp.value = d.address || '';
   inp.dataset.verified = d.address ? '1' : '';
@@ -2072,9 +2152,13 @@ function editDestAddress(i) {
   document.getElementById('edit-addr-modal').classList.add('open');
 }
 function saveEditedAddress() {
+  const nameVal = document.getElementById('edit-dest-name').value.trim();
+  if (!nameVal) { showToast('Enter a destination name', '⚠️'); return; }
   const inp = document.getElementById('edit-addr-input');
   if (!inp.value.trim()) { showToast('Enter an address', '⚠️'); return; }
   if (!inp.dataset.verified) { showToast('Please select an address from the suggestions', '⚠️'); return; }
+  config.destinations[editingDestIdx].name    = nameVal;
+  config.destinations[editingDestIdx].icon    = document.getElementById('edit-dest-icon').value;
   config.destinations[editingDestIdx].address = inp.value.trim();
   if (inp.dataset.detectedRegion) {
     config.destinations[editingDestIdx].region = inp.dataset.detectedRegion;
@@ -2082,9 +2166,10 @@ function saveEditedAddress() {
     config.destinations[editingDestIdx].region = detectRegion(inp.value.trim());
   }
   saveConfig();
+  renderDestGrid();
   renderSettingsPage();
   closeModal('edit-addr-modal');
-  showToast('Address updated ✓', '📍');
+  showToast('Destination updated ✓', '📍');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2189,15 +2274,29 @@ function escapeAttr(str) {
 // ═══════════════════════════════════════════════════════════
 //  MODALS / CLEAR DATA
 // ═══════════════════════════════════════════════════════════
-function confirmClear() { document.getElementById('confirm-modal').classList.add('open'); }
-function clearAllData() {
+function confirmClearTransactions() { document.getElementById('confirm-modal').classList.add('open'); }
+function confirmResetEverything()  { document.getElementById('reset-modal').classList.add('open'); }
+function clearTransactions() {
   entries = []; receipts = {};
   save(); renderHistory(); updateSummary(); setExportPreview();
   closeModal('confirm-modal');
-  showToast('All data cleared', '🗑️');
+  showToast('Transactions cleared', '🧹');
+}
+async function resetEverything() {
+  entries  = [];
+  receipts = {};
+  config   = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  saveLocal();
+  syncToCloud();
+  renderHistory(); updateSummary(); setExportPreview(); renderSettingsPage(); renderDestGrid();
+  closeModal('reset-modal');
+  showToast('App reset to factory state', '🗑️');
 }
 document.getElementById('confirm-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('confirm-modal')) closeModal('confirm-modal');
+});
+document.getElementById('reset-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('reset-modal')) closeModal('reset-modal');
 });
 document.getElementById('edit-addr-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('edit-addr-modal')) closeModal('edit-addr-modal');
@@ -2274,17 +2373,26 @@ function saveTimeEntry() {
   });
   if (!hasHours) { showToast('Enter hours or select a fixed item', '⚠️'); return; }
 
+  const isEdit   = !!editingEntryId;
+  const existing = isEdit ? entries.find(x => x.id === editingEntryId) : null;
   const entry = {
-    id: uid(), type: 'time',
+    id: isEdit ? editingEntryId : uid(), type: 'time',
     date: periodStart, // used for grouping/filtering
     periodStart, periodEnd, hours,
     notes: document.getElementById('time-notes').value.trim(),
-    createdAt: Date.now()
+    createdAt: existing ? existing.createdAt : Date.now()
   };
-  entries.unshift(entry);
+  if (isEdit) {
+    const idx = entries.findIndex(x => x.id === editingEntryId);
+    if (idx > -1) entries[idx] = entry; else entries.unshift(entry);
+    editingEntryId = null;
+    document.getElementById('edit-banner').classList.remove('show');
+  } else {
+    entries.unshift(entry);
+  }
   save();
   const totalHrs = calcTimeTotalHours(entry);
-  showToast(totalHrs.toFixed(2) + ' hrs saved!', '🕐');
+  showToast(totalHrs.toFixed(2) + ' hrs ' + (isEdit ? 'updated' : 'saved') + '!', '🕐');
 
   // Reset
   renderTimeTypeRows();
@@ -2391,6 +2499,13 @@ function deleteClientEntry(i) {
   renderSettingsPage();
   showToast('Client removed', '🗑️');
 }
+function setClientDefault(i) {
+  (config.clients || []).forEach((c, j) => { c.isDefault = (j === i); });
+  saveConfig();
+  renderSettingsPage();
+  renderInvClientChips();
+  showToast((config.clients[i]?.name || 'Client') + ' set as default', '★');
+}
 function clearClientForm() {
   ['edit-client-id','setting-client-name','setting-client-addr1','setting-client-addr2','setting-client-phone','setting-client-email']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -2418,10 +2533,16 @@ function invPeriodEntries() {
 }
 
 function renderInvClientChips() {
-  const el = document.getElementById('inv-client-chips');
+  const wrap = document.getElementById('inv-client-wrap');
+  const el   = document.getElementById('inv-client-chips');
   if (!el) return;
   const clients = config.clients || [];
-  if (!clients.length) { el.innerHTML = ''; return; }
+  if (!clients.length) {
+    if (wrap) wrap.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  if (wrap) wrap.style.display = '';
   // Ensure activeInvClientId is set to the default client on first render
   if (!activeInvClientId || !clients.find(c => c.id === activeInvClientId)) {
     const def = clients.find(c => c.isDefault) || clients[0];
@@ -2604,7 +2725,19 @@ function buildInvoiceHTML(forPrint) {
   <div class="grand">${fmt(grandTotal)}</div>
 </div>
 
-${biz.bank ? `<div class="bank-box"><div class="bank-label">💳 Payment — Bank Transfer</div><div class="bank-num">${biz.bank}</div><div style="font-size:12px;color:#555;margin-top:4px">Reference: ${invNum}</div></div>` : ''}
+${(()=>{
+  const payBank   = document.getElementById('inv-pay-bank')?.dataset.on !== 'false';
+  const payCustom = document.getElementById('inv-pay-custom')?.dataset.on === 'true';
+  const customTxt = (document.getElementById('inv-pay-custom-text')?.value || '').trim();
+  let payHtml = '';
+  if (payBank && biz.bank) {
+    payHtml += `<div class="bank-box"><div class="bank-label">💳 Payment — Bank Transfer</div><div class="bank-num">${biz.bank}</div><div style="font-size:12px;color:#555;margin-top:4px">Reference: ${invNum}</div></div>`;
+  }
+  if (payCustom && customTxt) {
+    payHtml += `<div class="bank-box" style="margin-top:12px;background:#f7f8fc;border-color:#d0d5e8"><div class="bank-label" style="color:#555">📝 Payment Instructions</div><div style="font-size:13px;color:#333;white-space:pre-line;margin-top:4px">${customTxt}</div></div>`;
+  }
+  return payHtml;
+})()}
 
 <div class="footer">${(()=>{const n=new Date();const d=n.toLocaleDateString('en-NZ',{day:'2-digit',month:'2-digit',year:'numeric'});const t=n.toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit',hour12:false});return`Generated by MyTE on ${d} at ${t}`;})()}</div>
 </body></html>`;
@@ -2680,6 +2813,13 @@ function toggleInvDefault(key) {
   el.dataset.on = el.dataset.on === 'true' ? 'false' : 'true';
 }
 
+function toggleInvPay(el) {
+  el.dataset.on = el.dataset.on === 'true' ? 'false' : 'true';
+  if (el.id === 'inv-pay-custom') {
+    const ta = document.getElementById('inv-pay-custom-text');
+    if (ta) ta.style.display = el.dataset.on === 'true' ? '' : 'none';
+  }
+}
 function saveInvoiceDefaults() {
   const tEl = document.getElementById('inv-default-time');
   const mEl = document.getElementById('inv-default-mileage');
