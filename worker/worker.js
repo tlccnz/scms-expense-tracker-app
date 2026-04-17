@@ -83,7 +83,8 @@ export default {
     if (path === '/api/health' && method === 'GET')  return json({ ok: true });
 
     // ── ADMIN ROUTES ──
-    if (path === '/api/admin/create-user' && method === 'POST') return handleCreateUser(request, env);
+    if (path === '/api/admin/create-user'  && method === 'POST') return handleCreateUser(request, env);
+    if (path === '/api/admin/all-entries'  && method === 'GET')  return handleAdminAllEntries(request, env);
 
     // ── AUTHENTICATED ROUTES ──
     const session = await authenticate(request, env);
@@ -196,6 +197,38 @@ async function handleCreateUser(request, env) {
   }));
 
   return json({ ok: true, userId, email: email.toLowerCase() });
+}
+
+// ── ADMIN: ALL ENTRIES ───────────────────────────────────────
+// Returns all users' entries + config for server-to-server reads (e.g. Sprout).
+// Protected by X-Admin-Secret header matching ADMIN_SECRET env var.
+async function handleAdminAllEntries(request, env) {
+  const secret = request.headers.get('X-Admin-Secret') || '';
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) return err('Forbidden', 403);
+
+  const userList = await env.MYTE_DATA.list({ prefix: 'user:' });
+  const users = [];
+
+  for (const key of userList.keys) {
+    const raw = await env.MYTE_DATA.get(key.name);
+    if (!raw) continue;
+    const user = JSON.parse(raw);
+    const [entriesRaw, configRaw] = await Promise.all([
+      env.MYTE_DATA.get(`data:${user.userId}:entries`),
+      env.MYTE_DATA.get(`data:${user.userId}:config`),
+    ]);
+    const entries = JSON.parse(entriesRaw || '[]');
+    const config  = JSON.parse(configRaw  || '{}');
+    users.push({
+      userId:  user.userId,
+      email:   user.email,
+      name:    user.name,
+      bizName: config.bizDetails?.name || user.name,
+      entries,
+    });
+  }
+
+  return json({ users });
 }
 
 async function handleGetData(env, session, key, defaultVal) {
